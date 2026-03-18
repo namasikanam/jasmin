@@ -2,7 +2,7 @@ From mathcomp Require Import ssreflect ssrfun.
 
 Require Import expr.
 
-Axiom (mkvar : string -> var).
+Axiom (mkvar : string -> gvar).
 Axiom (mkvar_inj : injective mkvar).
 Axiom (mkfunname : string -> funname).
 Axiom (mkfunname_inj : injective mkfunname).
@@ -59,8 +59,8 @@ Notation "( e )" :=
 
 (* Variables: any Coq identifier in scope is lifted via coercion.
    If x : gvar, it becomes Pvar x. If x : pexpr, used directly. *)
-Notation "x" := x
-  (in custom expr at level 0, x ident)
+Notation "x" := (mkvar x)
+  (in custom expr at level 0)
   : expr_scope.
 
 (* Integer constants: #3 means Pconst 3. *)
@@ -91,6 +91,7 @@ Notation "'-i' e" :=
   : expr_scope.
 
 (* Word negation: -[ws] e *)
+(* TODO: try to remove brackets, as Jasmin does not print it *)
 Notation "'-[' ws ']' e" :=
   (Papp1 (Oneg (Op_w ws)) e)
   (in custom expr at level 2, ws constr at level 0)
@@ -375,7 +376,8 @@ Section Tests.
 Context (x y z b : gvar).
 
 (* --- Jasmin: x +64u y --- *)
-Check expr:( x +[U64] y ).
+(* TODO: U64 -> 64u, no brackets *)
+Check expr:( "x" +[U64] "y" ).
 (* Papp2 (Oadd (Op_w U64)) x y *)
 
 (* --- Jasmin: z *64u x +64u 3 --- *)
