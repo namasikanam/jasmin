@@ -10,9 +10,10 @@ Axiom (mkfunname_inj : injective mkfunname).
 (* ========================================================================= *)
 (* Notation system for Jasmin expressions.                                   *)
 (*                                                                           *)
-(* Word sizes are specified using bracket syntax: +[U64], *[U32], etc.       *)
+(* Syntax mirrors Jasmin: +64u, *32u, ==64u, <64s, etc.                      *)
+(* Variables are written as string literals: "x", "y".                       *)
 (* Integer operators use an 'i' suffix: +i, -i, *i, ==i, etc.               *)
-(* Boolean operators use standard symbols: &&, ||, !                         *)
+(* Boolean operators: &&, ||, !                                              *)
 (*                                                                           *)
 (* Precedence levels (higher = binds more loosely):                          *)
 (*   2  : unary !, -, ~                                                      *)
@@ -57,10 +58,9 @@ Notation "( e )" :=
 
 (* --- Atoms --- *)
 
-(* Variables: any Coq identifier in scope is lifted via coercion.
-   If x : gvar, it becomes Pvar x. If x : pexpr, used directly. *)
+(* Variables are string literals, mapped through mkvar. *)
 Notation "x" := (mkvar x)
-  (in custom expr at level 0)
+  (in custom expr at level 0, x constr at level 0)
   : expr_scope.
 
 (* Integer constants: #3 means Pconst 3. *)
@@ -90,24 +90,30 @@ Notation "'-i' e" :=
   (in custom expr at level 2)
   : expr_scope.
 
-(* Word negation: -[ws] e *)
-(* TODO: try to remove brackets, as Jasmin does not print it *)
-Notation "'-[' ws ']' e" :=
-  (Papp1 (Oneg (Op_w ws)) e)
-  (in custom expr at level 2, ws constr at level 0)
-  : expr_scope.
+(* Word negation: -Nu e *)
+Notation "- 8 'u' e"   := (Papp1 (Oneg (Op_w U8)) e)   (in custom expr at level 2) : expr_scope.
+Notation "- 16 'u' e"  := (Papp1 (Oneg (Op_w U16)) e)  (in custom expr at level 2) : expr_scope.
+Notation "- 32 'u' e"  := (Papp1 (Oneg (Op_w U32)) e)  (in custom expr at level 2) : expr_scope.
+Notation "- 64 'u' e"  := (Papp1 (Oneg (Op_w U64)) e)  (in custom expr at level 2) : expr_scope.
+Notation "- 128 'u' e" := (Papp1 (Oneg (Op_w U128)) e) (in custom expr at level 2) : expr_scope.
+Notation "- 256 'u' e" := (Papp1 (Oneg (Op_w U256)) e) (in custom expr at level 2) : expr_scope.
 
-(* Bitwise NOT: ~[ws] e *)
-Notation "'~[' ws ']' e" :=
-  (Papp1 (Olnot ws) e)
-  (in custom expr at level 2, ws constr at level 0)
-  : expr_scope.
+(* Bitwise NOT: ~Nu e *)
+Notation "~ 8 'u' e"   := (Papp1 (Olnot U8) e)   (in custom expr at level 2) : expr_scope.
+Notation "~ 16 'u' e"  := (Papp1 (Olnot U16) e)  (in custom expr at level 2) : expr_scope.
+Notation "~ 32 'u' e"  := (Papp1 (Olnot U32) e)  (in custom expr at level 2) : expr_scope.
+Notation "~ 64 'u' e"  := (Papp1 (Olnot U64) e)  (in custom expr at level 2) : expr_scope.
+Notation "~ 128 'u' e" := (Papp1 (Olnot U128) e) (in custom expr at level 2) : expr_scope.
+Notation "~ 256 'u' e" := (Papp1 (Olnot U256) e) (in custom expr at level 2) : expr_scope.
 
-(* Word-of-int cast: (cast ws) e *)
-Notation "'(cast' ws ')' e" :=
-  (Papp1 (Oword_of_int ws) e)
-  (in custom expr at level 2, ws constr at level 0)
-  : expr_scope.
+(* Word-of-int cast: (cast Nu) e *)
+(* Cannot use Jasmin's (Nu) syntax because it conflicts with ( e ) grouping. *)
+Notation "'(cast' 8 'u' ')' e"   := (Papp1 (Oword_of_int U8) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(cast' 16 'u' ')' e"  := (Papp1 (Oword_of_int U16) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(cast' 32 'u' ')' e"  := (Papp1 (Oword_of_int U32) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(cast' 64 'u' ')' e"  := (Papp1 (Oword_of_int U64) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(cast' 128 'u' ')' e" := (Papp1 (Oword_of_int U128) e) (in custom expr at level 2) : expr_scope.
+Notation "'(cast' 256 'u' ')' e" := (Papp1 (Oword_of_int U256) e) (in custom expr at level 2) : expr_scope.
 
 (* ========================================================================= *)
 (* Multiplicative operators (level 3, left associativity).                   *)
@@ -119,35 +125,45 @@ Notation "e1 '*i' e2" :=
   (in custom expr at level 3, left associativity)
   : expr_scope.
 
-(* Word multiplication: e1 *[ws] e2 *)
-Notation "e1 '*[' ws ']' e2" :=
-  (Papp2 (Omul (Op_w ws)) e1 e2)
-  (in custom expr at level 3, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Word multiplication: e1 *Nu e2 *)
+Notation "e1 * 8 'u' e2"   := (Papp2 (Omul (Op_w U8)) e1 e2)   (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 * 16 'u' e2"  := (Papp2 (Omul (Op_w U16)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 * 32 'u' e2"  := (Papp2 (Omul (Op_w U32)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 * 64 'u' e2"  := (Papp2 (Omul (Op_w U64)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 * 128 'u' e2" := (Papp2 (Omul (Op_w U128)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 * 256 'u' e2" := (Papp2 (Omul (Op_w U256)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
 
-(* Unsigned word division: e1 /[ws] e2 *)
-Notation "e1 '/[' ws ']' e2" :=
-  (Papp2 (Odiv Unsigned (Op_w ws)) e1 e2)
-  (in custom expr at level 3, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Unsigned word division: e1 /Nu e2 *)
+Notation "e1 / 8 'u' e2"   := (Papp2 (Odiv Unsigned (Op_w U8)) e1 e2)   (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 16 'u' e2"  := (Papp2 (Odiv Unsigned (Op_w U16)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 32 'u' e2"  := (Papp2 (Odiv Unsigned (Op_w U32)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 64 'u' e2"  := (Papp2 (Odiv Unsigned (Op_w U64)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 128 'u' e2" := (Papp2 (Odiv Unsigned (Op_w U128)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 256 'u' e2" := (Papp2 (Odiv Unsigned (Op_w U256)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
 
-(* Signed word division: e1 /s[ws] e2 *)
-Notation "e1 '/s[' ws ']' e2" :=
-  (Papp2 (Odiv Signed (Op_w ws)) e1 e2)
-  (in custom expr at level 3, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Signed word division: e1 /Ns e2 *)
+Notation "e1 / 8 's' e2"   := (Papp2 (Odiv Signed (Op_w U8)) e1 e2)   (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 16 's' e2"  := (Papp2 (Odiv Signed (Op_w U16)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 32 's' e2"  := (Papp2 (Odiv Signed (Op_w U32)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 64 's' e2"  := (Papp2 (Odiv Signed (Op_w U64)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 128 's' e2" := (Papp2 (Odiv Signed (Op_w U128)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 / 256 's' e2" := (Papp2 (Odiv Signed (Op_w U256)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
 
-(* Unsigned word modulo: e1 %[ws] e2 *)
-Notation "e1 '%[' ws ']' e2" :=
-  (Papp2 (Omod Unsigned (Op_w ws)) e1 e2)
-  (in custom expr at level 3, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Unsigned word modulo: e1 %Nu e2 *)
+Notation "e1 % 8 'u' e2"   := (Papp2 (Omod Unsigned (Op_w U8)) e1 e2)   (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 16 'u' e2"  := (Papp2 (Omod Unsigned (Op_w U16)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 32 'u' e2"  := (Papp2 (Omod Unsigned (Op_w U32)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 64 'u' e2"  := (Papp2 (Omod Unsigned (Op_w U64)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 128 'u' e2" := (Papp2 (Omod Unsigned (Op_w U128)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 256 'u' e2" := (Papp2 (Omod Unsigned (Op_w U256)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
 
-(* Signed word modulo: e1 %s[ws] e2 *)
-Notation "e1 '%s[' ws ']' e2" :=
-  (Papp2 (Omod Signed (Op_w ws)) e1 e2)
-  (in custom expr at level 3, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Signed word modulo: e1 %Ns e2 *)
+Notation "e1 % 8 's' e2"   := (Papp2 (Omod Signed (Op_w U8)) e1 e2)   (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 16 's' e2"  := (Papp2 (Omod Signed (Op_w U16)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 32 's' e2"  := (Papp2 (Omod Signed (Op_w U32)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 64 's' e2"  := (Papp2 (Omod Signed (Op_w U64)) e1 e2)  (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 128 's' e2" := (Papp2 (Omod Signed (Op_w U128)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
+Notation "e1 % 256 's' e2" := (Papp2 (Omod Signed (Op_w U256)) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
 
 (* ========================================================================= *)
 (* Additive operators (level 4, left associativity).                         *)
@@ -159,11 +175,13 @@ Notation "e1 '+i' e2" :=
   (in custom expr at level 4, left associativity)
   : expr_scope.
 
-(* Word addition: e1 +[ws] e2 *)
-Notation "e1 '+[' ws ']' e2" :=
-  (Papp2 (Oadd (Op_w ws)) e1 e2)
-  (in custom expr at level 4, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Word addition: e1 +Nu e2 *)
+Notation "e1 + 8 'u' e2"   := (Papp2 (Oadd (Op_w U8)) e1 e2)   (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 + 16 'u' e2"  := (Papp2 (Oadd (Op_w U16)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 + 32 'u' e2"  := (Papp2 (Oadd (Op_w U32)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 + 64 'u' e2"  := (Papp2 (Oadd (Op_w U64)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 + 128 'u' e2" := (Papp2 (Oadd (Op_w U128)) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 + 256 'u' e2" := (Papp2 (Oadd (Op_w U256)) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
 
 (* Integer subtraction: e1 -i e2 *)
 Notation "e1 '-i' e2" :=
@@ -171,137 +189,153 @@ Notation "e1 '-i' e2" :=
   (in custom expr at level 4, left associativity)
   : expr_scope.
 
-(* Word subtraction: e1 -[ws] e2 *)
-Notation "e1 '-[' ws ']' e2" :=
-  (Papp2 (Osub (Op_w ws)) e1 e2)
-  (in custom expr at level 4, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Word subtraction: e1 -Nu e2 *)
+Notation "e1 - 8 'u' e2"   := (Papp2 (Osub (Op_w U8)) e1 e2)   (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 - 16 'u' e2"  := (Papp2 (Osub (Op_w U16)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 - 32 'u' e2"  := (Papp2 (Osub (Op_w U32)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 - 64 'u' e2"  := (Papp2 (Osub (Op_w U64)) e1 e2)  (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 - 128 'u' e2" := (Papp2 (Osub (Op_w U128)) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
+Notation "e1 - 256 'u' e2" := (Papp2 (Osub (Op_w U256)) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
 
 (* ========================================================================= *)
 (* Shift and rotation operators (level 5, left associativity).               *)
 (* ========================================================================= *)
 
-(* Left shift: e1 <<[ws] e2 *)
-Notation "e1 '<<[' ws ']' e2" :=
-  (Papp2 (Olsl (Op_w ws)) e1 e2)
-  (in custom expr at level 5, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Left shift: e1 <<Nu e2 *)
+Notation "e1 << 8 'u' e2"   := (Papp2 (Olsl (Op_w U8)) e1 e2)   (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 << 16 'u' e2"  := (Papp2 (Olsl (Op_w U16)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 << 32 'u' e2"  := (Papp2 (Olsl (Op_w U32)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 << 64 'u' e2"  := (Papp2 (Olsl (Op_w U64)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 << 128 'u' e2" := (Papp2 (Olsl (Op_w U128)) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 << 256 'u' e2" := (Papp2 (Olsl (Op_w U256)) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
 
-(* Logical right shift: e1 >>[ws] e2 *)
-Notation "e1 '>>[' ws ']' e2" :=
-  (Papp2 (Olsr ws) e1 e2)
-  (in custom expr at level 5, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Logical right shift: e1 >>Nu e2 *)
+Notation "e1 >> 8 'u' e2"   := (Papp2 (Olsr U8) e1 e2)   (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 16 'u' e2"  := (Papp2 (Olsr U16) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 32 'u' e2"  := (Papp2 (Olsr U32) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 64 'u' e2"  := (Papp2 (Olsr U64) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 128 'u' e2" := (Papp2 (Olsr U128) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 256 'u' e2" := (Papp2 (Olsr U256) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
 
-(* Arithmetic right shift: e1 >>s[ws] e2 *)
-Notation "e1 '>>s[' ws ']' e2" :=
-  (Papp2 (Oasr (Op_w ws)) e1 e2)
-  (in custom expr at level 5, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Arithmetic right shift: e1 >>Ns e2 *)
+Notation "e1 >> 8 's' e2"   := (Papp2 (Oasr (Op_w U8)) e1 e2)   (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 16 's' e2"  := (Papp2 (Oasr (Op_w U16)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 32 's' e2"  := (Papp2 (Oasr (Op_w U32)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 64 's' e2"  := (Papp2 (Oasr (Op_w U64)) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 128 's' e2" := (Papp2 (Oasr (Op_w U128)) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 >> 256 's' e2" := (Papp2 (Oasr (Op_w U256)) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
 
-(* Rotate left: e1 <<r[ws] e2 *)
-Notation "e1 '<<r[' ws ']' e2" :=
-  (Papp2 (Orol ws) e1 e2)
-  (in custom expr at level 5, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Rotate left: e1 <<r Nu e2 *)
+Notation "e1 '<<r' 8 'u' e2"   := (Papp2 (Orol U8) e1 e2)   (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '<<r' 16 'u' e2"  := (Papp2 (Orol U16) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '<<r' 32 'u' e2"  := (Papp2 (Orol U32) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '<<r' 64 'u' e2"  := (Papp2 (Orol U64) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '<<r' 128 'u' e2" := (Papp2 (Orol U128) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '<<r' 256 'u' e2" := (Papp2 (Orol U256) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
 
-(* Rotate right: e1 >>r[ws] e2 *)
-Notation "e1 '>>r[' ws ']' e2" :=
-  (Papp2 (Oror ws) e1 e2)
-  (in custom expr at level 5, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Rotate right: e1 >>r Nu e2 *)
+Notation "e1 '>>r' 8 'u' e2"   := (Papp2 (Oror U8) e1 e2)   (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '>>r' 16 'u' e2"  := (Papp2 (Oror U16) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '>>r' 32 'u' e2"  := (Papp2 (Oror U32) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '>>r' 64 'u' e2"  := (Papp2 (Oror U64) e1 e2)  (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '>>r' 128 'u' e2" := (Papp2 (Oror U128) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
+Notation "e1 '>>r' 256 'u' e2" := (Papp2 (Oror U256) e1 e2) (in custom expr at level 5, left associativity) : expr_scope.
 
 (* ========================================================================= *)
 (* Bitwise operators.                                                        *)
 (* ========================================================================= *)
 
-(* Bitwise AND (level 6): e1 &[ws] e2 *)
-Notation "e1 '&[' ws ']' e2" :=
-  (Papp2 (Oland ws) e1 e2)
-  (in custom expr at level 6, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Bitwise AND (level 6): e1 &Nu e2 *)
+Notation "e1 & 8 'u' e2"   := (Papp2 (Oland U8) e1 e2)   (in custom expr at level 6, left associativity) : expr_scope.
+Notation "e1 & 16 'u' e2"  := (Papp2 (Oland U16) e1 e2)  (in custom expr at level 6, left associativity) : expr_scope.
+Notation "e1 & 32 'u' e2"  := (Papp2 (Oland U32) e1 e2)  (in custom expr at level 6, left associativity) : expr_scope.
+Notation "e1 & 64 'u' e2"  := (Papp2 (Oland U64) e1 e2)  (in custom expr at level 6, left associativity) : expr_scope.
+Notation "e1 & 128 'u' e2" := (Papp2 (Oland U128) e1 e2) (in custom expr at level 6, left associativity) : expr_scope.
+Notation "e1 & 256 'u' e2" := (Papp2 (Oland U256) e1 e2) (in custom expr at level 6, left associativity) : expr_scope.
 
-(* Bitwise XOR (level 7): e1 ^[ws] e2 *)
-Notation "e1 '^[' ws ']' e2" :=
-  (Papp2 (Olxor ws) e1 e2)
-  (in custom expr at level 7, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Bitwise XOR (level 7): e1 ^Nu e2 *)
+Notation "e1 ^ 8 'u' e2"   := (Papp2 (Olxor U8) e1 e2)   (in custom expr at level 7, left associativity) : expr_scope.
+Notation "e1 ^ 16 'u' e2"  := (Papp2 (Olxor U16) e1 e2)  (in custom expr at level 7, left associativity) : expr_scope.
+Notation "e1 ^ 32 'u' e2"  := (Papp2 (Olxor U32) e1 e2)  (in custom expr at level 7, left associativity) : expr_scope.
+Notation "e1 ^ 64 'u' e2"  := (Papp2 (Olxor U64) e1 e2)  (in custom expr at level 7, left associativity) : expr_scope.
+Notation "e1 ^ 128 'u' e2" := (Papp2 (Olxor U128) e1 e2) (in custom expr at level 7, left associativity) : expr_scope.
+Notation "e1 ^ 256 'u' e2" := (Papp2 (Olxor U256) e1 e2) (in custom expr at level 7, left associativity) : expr_scope.
 
-(* Bitwise OR (level 8): e1 |[ws] e2 *)
-Notation "e1 '|[' ws ']' e2" :=
-  (Papp2 (Olor ws) e1 e2)
-  (in custom expr at level 8, ws constr at level 0, left associativity)
-  : expr_scope.
+(* Bitwise OR (level 8): e1 |Nu e2 *)
+Notation "e1 | 8 'u' e2"   := (Papp2 (Olor U8) e1 e2)   (in custom expr at level 8, left associativity) : expr_scope.
+Notation "e1 | 16 'u' e2"  := (Papp2 (Olor U16) e1 e2)  (in custom expr at level 8, left associativity) : expr_scope.
+Notation "e1 | 32 'u' e2"  := (Papp2 (Olor U32) e1 e2)  (in custom expr at level 8, left associativity) : expr_scope.
+Notation "e1 | 64 'u' e2"  := (Papp2 (Olor U64) e1 e2)  (in custom expr at level 8, left associativity) : expr_scope.
+Notation "e1 | 128 'u' e2" := (Papp2 (Olor U128) e1 e2) (in custom expr at level 8, left associativity) : expr_scope.
+Notation "e1 | 256 'u' e2" := (Papp2 (Olor U256) e1 e2) (in custom expr at level 8, left associativity) : expr_scope.
 
 (* ========================================================================= *)
 (* Comparison operators (level 9, no associativity).                         *)
 (* ========================================================================= *)
 
 (* Integer comparisons. *)
+Notation "e1 '<i' e2"  := (Papp2 (Olt Cmp_int) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 '<=i' e2" := (Papp2 (Ole Cmp_int) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 '>i' e2"  := (Papp2 (Ogt Cmp_int) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 '>=i' e2" := (Papp2 (Oge Cmp_int) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '<i' e2" :=
-  (Papp2 (Olt Cmp_int) e1 e2)
-  (in custom expr at level 9, no associativity)
-  : expr_scope.
+(* Unsigned word comparisons: <Nu, <=Nu, >Nu, >=Nu *)
+Notation "e1 < 8 'u' e2"    := (Papp2 (Olt (Cmp_w Unsigned U8)) e1 e2)    (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 16 'u' e2"   := (Papp2 (Olt (Cmp_w Unsigned U16)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 32 'u' e2"   := (Papp2 (Olt (Cmp_w Unsigned U32)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 64 'u' e2"   := (Papp2 (Olt (Cmp_w Unsigned U64)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 128 'u' e2"  := (Papp2 (Olt (Cmp_w Unsigned U128)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 256 'u' e2"  := (Papp2 (Olt (Cmp_w Unsigned U256)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '<=i' e2" :=
-  (Papp2 (Ole Cmp_int) e1 e2)
-  (in custom expr at level 9, no associativity)
-  : expr_scope.
+Notation "e1 <= 8 'u' e2"   := (Papp2 (Ole (Cmp_w Unsigned U8)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 16 'u' e2"  := (Papp2 (Ole (Cmp_w Unsigned U16)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 32 'u' e2"  := (Papp2 (Ole (Cmp_w Unsigned U32)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 64 'u' e2"  := (Papp2 (Ole (Cmp_w Unsigned U64)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 128 'u' e2" := (Papp2 (Ole (Cmp_w Unsigned U128)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 256 'u' e2" := (Papp2 (Ole (Cmp_w Unsigned U256)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '>i' e2" :=
-  (Papp2 (Ogt Cmp_int) e1 e2)
-  (in custom expr at level 9, no associativity)
-  : expr_scope.
+Notation "e1 > 8 'u' e2"    := (Papp2 (Ogt (Cmp_w Unsigned U8)) e1 e2)    (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 16 'u' e2"   := (Papp2 (Ogt (Cmp_w Unsigned U16)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 32 'u' e2"   := (Papp2 (Ogt (Cmp_w Unsigned U32)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 64 'u' e2"   := (Papp2 (Ogt (Cmp_w Unsigned U64)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 128 'u' e2"  := (Papp2 (Ogt (Cmp_w Unsigned U128)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 256 'u' e2"  := (Papp2 (Ogt (Cmp_w Unsigned U256)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '>=i' e2" :=
-  (Papp2 (Oge Cmp_int) e1 e2)
-  (in custom expr at level 9, no associativity)
-  : expr_scope.
+Notation "e1 >= 8 'u' e2"   := (Papp2 (Oge (Cmp_w Unsigned U8)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 16 'u' e2"  := (Papp2 (Oge (Cmp_w Unsigned U16)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 32 'u' e2"  := (Papp2 (Oge (Cmp_w Unsigned U32)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 64 'u' e2"  := (Papp2 (Oge (Cmp_w Unsigned U64)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 128 'u' e2" := (Papp2 (Oge (Cmp_w Unsigned U128)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 256 'u' e2" := (Papp2 (Oge (Cmp_w Unsigned U256)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
-(* Unsigned word comparisons. *)
+(* Signed word comparisons: <Ns, <=Ns, >Ns, >=Ns *)
+Notation "e1 < 8 's' e2"    := (Papp2 (Olt (Cmp_w Signed U8)) e1 e2)    (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 16 's' e2"   := (Papp2 (Olt (Cmp_w Signed U16)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 32 's' e2"   := (Papp2 (Olt (Cmp_w Signed U32)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 64 's' e2"   := (Papp2 (Olt (Cmp_w Signed U64)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 128 's' e2"  := (Papp2 (Olt (Cmp_w Signed U128)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 < 256 's' e2"  := (Papp2 (Olt (Cmp_w Signed U256)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '<[' ws ']' e2" :=
-  (Papp2 (Olt (Cmp_w Unsigned ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
+Notation "e1 <= 8 's' e2"   := (Papp2 (Ole (Cmp_w Signed U8)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 16 's' e2"  := (Papp2 (Ole (Cmp_w Signed U16)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 32 's' e2"  := (Papp2 (Ole (Cmp_w Signed U32)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 64 's' e2"  := (Papp2 (Ole (Cmp_w Signed U64)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 128 's' e2" := (Papp2 (Ole (Cmp_w Signed U128)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 <= 256 's' e2" := (Papp2 (Ole (Cmp_w Signed U256)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '<=[' ws ']' e2" :=
-  (Papp2 (Ole (Cmp_w Unsigned ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
+Notation "e1 > 8 's' e2"    := (Papp2 (Ogt (Cmp_w Signed U8)) e1 e2)    (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 16 's' e2"   := (Papp2 (Ogt (Cmp_w Signed U16)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 32 's' e2"   := (Papp2 (Ogt (Cmp_w Signed U32)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 64 's' e2"   := (Papp2 (Ogt (Cmp_w Signed U64)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 128 's' e2"  := (Papp2 (Ogt (Cmp_w Signed U128)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 > 256 's' e2"  := (Papp2 (Ogt (Cmp_w Signed U256)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
 
-Notation "e1 '>[' ws ']' e2" :=
-  (Papp2 (Ogt (Cmp_w Unsigned ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
-
-Notation "e1 '>=[' ws ']' e2" :=
-  (Papp2 (Oge (Cmp_w Unsigned ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
-
-(* Signed word comparisons. *)
-
-Notation "e1 '<s[' ws ']' e2" :=
-  (Papp2 (Olt (Cmp_w Signed ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
-
-Notation "e1 '<=s[' ws ']' e2" :=
-  (Papp2 (Ole (Cmp_w Signed ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
-
-Notation "e1 '>s[' ws ']' e2" :=
-  (Papp2 (Ogt (Cmp_w Signed ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
-
-Notation "e1 '>=s[' ws ']' e2" :=
-  (Papp2 (Oge (Cmp_w Signed ws)) e1 e2)
-  (in custom expr at level 9, ws constr at level 0, no associativity)
-  : expr_scope.
+Notation "e1 >= 8 's' e2"   := (Papp2 (Oge (Cmp_w Signed U8)) e1 e2)   (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 16 's' e2"  := (Papp2 (Oge (Cmp_w Signed U16)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 32 's' e2"  := (Papp2 (Oge (Cmp_w Signed U32)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 64 's' e2"  := (Papp2 (Oge (Cmp_w Signed U64)) e1 e2)  (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 128 's' e2" := (Papp2 (Oge (Cmp_w Signed U128)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
+Notation "e1 >= 256 's' e2" := (Papp2 (Oge (Cmp_w Signed U256)) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
 (* ========================================================================= *)
 (* Equality operators (level 10, no associativity).                          *)
@@ -318,16 +352,20 @@ Notation "e1 '!=i' e2" :=
   (in custom expr at level 10, no associativity)
   : expr_scope.
 
-(* Word equality. *)
-Notation "e1 '==[' ws ']' e2" :=
-  (Papp2 (Oeq (Op_w ws)) e1 e2)
-  (in custom expr at level 10, ws constr at level 0, no associativity)
-  : expr_scope.
+(* Word equality: ==Nu, !=Nu *)
+Notation "e1 == 8 'u' e2"   := (Papp2 (Oeq (Op_w U8)) e1 e2)   (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 == 16 'u' e2"  := (Papp2 (Oeq (Op_w U16)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 == 32 'u' e2"  := (Papp2 (Oeq (Op_w U32)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 == 64 'u' e2"  := (Papp2 (Oeq (Op_w U64)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 == 128 'u' e2" := (Papp2 (Oeq (Op_w U128)) e1 e2) (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 == 256 'u' e2" := (Papp2 (Oeq (Op_w U256)) e1 e2) (in custom expr at level 10, no associativity) : expr_scope.
 
-Notation "e1 '!=[' ws ']' e2" :=
-  (Papp2 (Oneq (Op_w ws)) e1 e2)
-  (in custom expr at level 10, ws constr at level 0, no associativity)
-  : expr_scope.
+Notation "e1 != 8 'u' e2"   := (Papp2 (Oneq (Op_w U8)) e1 e2)   (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 != 16 'u' e2"  := (Papp2 (Oneq (Op_w U16)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 != 32 'u' e2"  := (Papp2 (Oneq (Op_w U32)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 != 64 'u' e2"  := (Papp2 (Oneq (Op_w U64)) e1 e2)  (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 != 128 'u' e2" := (Papp2 (Oneq (Op_w U128)) e1 e2) (in custom expr at level 10, no associativity) : expr_scope.
+Notation "e1 != 256 'u' e2" := (Papp2 (Oneq (Op_w U256)) e1 e2) (in custom expr at level 10, no associativity) : expr_scope.
 
 (* Boolean equality. *)
 Notation "e1 '==b' e2" :=
@@ -353,9 +391,22 @@ Notation "e1 || e2" :=
 
 (* ========================================================================= *)
 (* Ternary conditional (level 13).                                           *)
-(* Pif requires an atype annotation: use ? [ty] e2 : e3                     *)
+(* Pif requires an atype: e1 ?Nu e2 : e3 for word, ?bool / ?int for others. *)
 (* ========================================================================= *)
 
+(* Word-typed ternary: e1 ?Nu e2 : e3 *)
+Notation "e1 ? 8 'u' e2 ':' e3"   := (Pif (aword U8) e1 e2 e3)   (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 ? 16 'u' e2 ':' e3"  := (Pif (aword U16) e1 e2 e3)  (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 ? 32 'u' e2 ':' e3"  := (Pif (aword U32) e1 e2 e3)  (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 ? 64 'u' e2 ':' e3"  := (Pif (aword U64) e1 e2 e3)  (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 ? 128 'u' e2 ':' e3" := (Pif (aword U128) e1 e2 e3) (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 ? 256 'u' e2 ':' e3" := (Pif (aword U256) e1 e2 e3) (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+
+(* Bool/int-typed ternary. *)
+Notation "e1 '?bool' e2 ':' e3" := (Pif abool e1 e2 e3) (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+Notation "e1 '?int' e2 ':' e3"  := (Pif aint e1 e2 e3)  (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
+
+(* Generic fallback with explicit atype: e1 ?[ty] e2 : e3 *)
 Notation "e1 '?[' ty ']' e2 ':' e3" :=
   (Pif ty e1 e2 e3)
   (in custom expr at level 13, ty constr at level 0,
@@ -373,44 +424,42 @@ Open Scope expr_scope.
 Unset Printing Notations.
 
 Section Tests.
-Context (x y z b : gvar).
 
 (* --- Jasmin: x +64u y --- *)
-(* TODO: U64 -> 64u, no brackets *)
-Check expr:( "x" +[U64] "y" ).
-(* Papp2 (Oadd (Op_w U64)) x y *)
+Check expr:( "x" +64u "y" ).
+(* Papp2 (Oadd (Op_w U64)) (mkvar "x") (mkvar "y") *)
 
 (* --- Jasmin: z *64u x +64u 3 --- *)
-Check expr:( z *[U64] x +[U64] #3 ).
-(* Papp2 (Oadd (Op_w U64)) (Papp2 (Omul (Op_w U64)) z x) (Pconst 3) *)
+Check expr:( "z" *64u "x" +64u #3 ).
+(* Papp2 (Oadd (Op_w U64)) (Papp2 (Omul (Op_w U64)) (mkvar "z") (mkvar "x")) (Pconst 3) *)
 
 (* --- Jasmin: true ? x &32u y : z --- *)
-Check expr:( true ?[aword U32] x &[U32] y : z ).
-(* Pif (aword U32) (Pbool true) (Papp2 (Oland U32) x y) z *)
+Check expr:( true ?32u "x" &32u "y" : "z" ).
+(* Pif (aword U32) (Pbool true) (Papp2 (Oland U32) (mkvar "x") (mkvar "y")) (mkvar "z") *)
 
-(* --- Jasmin: y <<r64u z (rotate left) --- *)
-Check expr:( y <<r[U64] z ).
-(* Papp2 (Orol U64) y z *)
+(* --- Jasmin: y <<r 64u z (rotate left) --- *)
+Check expr:( "y" <<r 64u "z" ).
+(* Papp2 (Orol U64) (mkvar "y") (mkvar "z") *)
 
 (* --- Jasmin: y <<64u y --- *)
-Check expr:( y <<[U64] y ).
-(* Papp2 (Olsl (Op_w U64)) y y *)
+Check expr:( "y" <<64u "y" ).
+(* Papp2 (Olsl (Op_w U64)) (mkvar "y") (mkvar "y") *)
 
 (* --- Jasmin: y >>64u y --- *)
-Check expr:( y >>[U64] y ).
-(* Papp2 (Olsr U64) y y *)
+Check expr:( "y" >>64u "y" ).
+(* Papp2 (Olsr U64) (mkvar "y") (mkvar "y") *)
 
 (* --- Jasmin: x ==64u y --- *)
-Check expr:( x ==[U64] y ).
-(* Papp2 (Oeq (Op_w U64)) x y *)
+Check expr:( "x" ==64u "y" ).
+(* Papp2 (Oeq (Op_w U64)) (mkvar "x") (mkvar "y") *)
 
-(* --- Jasmin: b && x <=u y --- *)
-Check expr:( b && x <=[U64] y ).
-(* Papp2 Oand b (Papp2 (Ole (Cmp_w Unsigned U64)) x y) *)
+(* --- Jasmin: b && x <=64u y --- *)
+Check expr:( "b" && "x" <=64u "y" ).
+(* Papp2 Oand (mkvar "b") (Papp2 (Ole (Cmp_w Unsigned U64)) (mkvar "x") (mkvar "y")) *)
 
-(* --- Jasmin: x !=64u y || x <u y --- *)
-Check expr:( x !=[U64] y || x <[U64] y ).
-(* Papp2 Oor (Papp2 (Oneq (Op_w U64)) x y) (Papp2 (Olt (Cmp_w Unsigned U64)) x y) *)
+(* --- Jasmin: x !=64u y || x <64u y --- *)
+Check expr:( "x" !=64u "y" || "x" <64u "y" ).
+(* Papp2 Oor (Papp2 (Oneq (Op_w U64)) ...) (Papp2 (Olt (Cmp_w Unsigned U64)) ...) *)
 
 (* --- Integer arithmetic --- *)
 Check expr:( #5 -i #2 ).
@@ -418,22 +467,28 @@ Check expr:( #5 -i #2 ).
 
 (* --- Mixed boolean/integer --- *)
 Check expr:( true || false && (#1 -i #10) ==i false ).
-(* Papp2 Oor true (Papp2 Oand false (Papp2 (Oeq Op_int) (Papp2 (Osub Op_int) 1 10) false)) *)
 
-(* --- Word-of-int cast --- *)
-Check expr:( (cast U64) #3 ).
+(* --- Word-of-int cast: (cast 64u) #3 --- *)
+Check expr:( (cast 64u) #3 ).
 (* Papp1 (Oword_of_int U64) (Pconst 3) *)
 
 (* --- Bitwise operations --- *)
-Check expr:( x ^[U64] y ).
-Check expr:( x |[U64] y ).
+Check expr:( "x" ^64u "y" ).
+Check expr:( "x" |64u "y" ).
 
 (* --- Signed comparison --- *)
-Check expr:( x <s[U64] y ).
+Check expr:( "x" <64s "y" ).
 
-(* --- Division and modulo --- *)
-Check expr:( x /[U64] y ).
-Check expr:( x /s[U64] y ).
-Check expr:( x %[U64] y ).
+(* --- Unsigned/signed division and modulo --- *)
+Check expr:( "x" /64u "y" ).
+Check expr:( "x" /64s "y" ).
+Check expr:( "x" %64u "y" ).
+
+(* --- Arithmetic right shift --- *)
+Check expr:( "x" >>64s "y" ).
+
+(* --- Bitwise NOT and word negation --- *)
+Check expr:( ~64u "x" ).
+Check expr:( -64u "x" ).
 
 End Tests.
