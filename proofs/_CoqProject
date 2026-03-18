@@ -189,6 +189,7 @@ lang/strings.v
 lang/syscall.v
 lang/syscall_sem.v
 lang/tagged.v
+lang/parse.v
 lang/type.v
 lang/utils.v
 lang/values.v
