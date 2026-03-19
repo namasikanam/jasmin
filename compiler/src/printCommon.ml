@@ -98,18 +98,18 @@ let string_of_wiop1 ~debug sg = function
   | WIneg sz ->
       asprintf "-%s" (string_of_wi_cast sg sz)
 
-(* Coq-compatible: uses (cast ...) prefix for all cast-like operations *)
+(* Coq-compatible: distinct keywords for each wint cast type *)
 let string_of_wiop1_coq sg = function
-  | WIwint_of_int sz ->
+  | WIwint_of_int sz ->                              (* int → wint *)
       asprintf "(%s)" (string_of_wi_cast sg sz)
-  | WIint_of_wint _sz ->
-      asprintf "(cast %s)" (string_of_int_cast sg)
-  | WIword_of_wint sz ->
-      asprintf "(cast %s)" (string_of_w_cast sz)
-  | WIwint_of_word sz ->
-      asprintf "(cast %s)" (string_of_wi_cast sg sz)
-  | WIwint_ext(szo, _) ->
-      asprintf "(cast %s)" (string_of_wi_cast sg szo)
+  | WIint_of_wint _sz ->                             (* wint → int *)
+      asprintf "(%s)" (string_of_int_cast sg)
+  | WIword_of_wint sz ->                             (* wint → word *)
+      asprintf "(wi2w %s)" (string_of_w_cast sz)
+  | WIwint_of_word sz ->                             (* word → wint *)
+      asprintf "(w2wi %s)" (string_of_wi_cast sg sz)
+  | WIwint_ext(szo, _) ->                            (* wint → wint resize *)
+      asprintf "(wiext %s)" (string_of_wi_cast sg szo)
   | WIneg sz ->
       asprintf "-%s" (string_of_wi_cast sg sz)
 
@@ -175,13 +175,13 @@ let string_of_op2 = function
   | Ovlsl (ve, ws) -> asprintf "<<%s" (string_of_velem Signed ws ve)
   | Owi2(sg, ws, o) -> string_of_wiop2 sg ws o
 
-(* Coq-compatible: (cast Nu) for word_of_int, sizes in comparisons *)
+(* Coq-compatible: distinct keywords for each cast type *)
 let string_of_op1_coq ~debug:_ = function
-  | Oint_of_word (s, _sz) ->
-      asprintf "(%s)" (string_of_int_cast s)
+  | Oint_of_word (Unsigned, _sz) -> "(uint)"
+  | Oint_of_word (Signed, _sz) -> "(sint)"
   | Oword_of_int szo  -> asprintf "(cast %du)" (int_of_ws szo)
-  | Osignext (szo, _) -> asprintf "(cast %ds)" (int_of_ws szo)
-  | Ozeroext (szo, _) -> asprintf "(cast %du)" (int_of_ws szo)
+  | Osignext (szo, _) -> asprintf "(signext %du)" (int_of_ws szo)
+  | Ozeroext (szo, _) -> asprintf "(zeroext %du)" (int_of_ws szo)
   | Olnot sz ->
       asprintf "!%s" (string_of_w_cast sz)
   | Onot -> "!"

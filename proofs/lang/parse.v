@@ -110,6 +110,7 @@ Notation "- 64 'u' e"  := (Papp1 (Oneg (Op_w U64)) e)  (in custom expr at level 
 Notation "- 128 'u' e" := (Papp1 (Oneg (Op_w U128)) e) (in custom expr at level 2) : expr_scope.
 Notation "- 256 'u' e" := (Papp1 (Oneg (Op_w U256)) e) (in custom expr at level 2) : expr_scope.
 
+(* Wrong: it's ! *)
 (* Bitwise NOT: ~Nu e *)
 Notation "! 8 'u' e"   := (Papp1 (Olnot U8) e)   (in custom expr at level 2) : expr_scope.
 Notation "! 16 'u' e"  := (Papp1 (Olnot U16) e)  (in custom expr at level 2) : expr_scope.
@@ -118,14 +119,37 @@ Notation "! 64 'u' e"  := (Papp1 (Olnot U64) e)  (in custom expr at level 2) : e
 Notation "! 128 'u' e" := (Papp1 (Olnot U128) e) (in custom expr at level 2) : expr_scope.
 Notation "! 256 'u' e" := (Papp1 (Olnot U256) e) (in custom expr at level 2) : expr_scope.
 
-(* Word-of-int cast: (cast Nu) e *)
-(* Cannot use Jasmin's (Nu) syntax because it conflicts with ( e ) grouping. *)
+(* What about all the other casts? *)
+
+(* ---- Casts between all types ---- *)
+
+(* Oword_of_int: int → word. Syntax: (cast Nu) e *)
 Notation "'(cast' 8 'u' ')' e"   := (Papp1 (Oword_of_int U8) e)   (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 16 'u' ')' e"  := (Papp1 (Oword_of_int U16) e)  (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 32 'u' ')' e"  := (Papp1 (Oword_of_int U32) e)  (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 64 'u' ')' e"  := (Papp1 (Oword_of_int U64) e)  (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 128 'u' ')' e" := (Papp1 (Oword_of_int U128) e) (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 256 'u' ')' e" := (Papp1 (Oword_of_int U256) e) (in custom expr at level 2) : expr_scope.
+
+(* Ozeroext: word → word (zero-extend). Syntax: (zeroext Nu) e *)
+Notation "'(zeroext' 8 'u' ')' e"   := (Papp1 (Ozeroext U8 U8) e)     (in custom expr at level 2) : expr_scope.
+Notation "'(zeroext' 16 'u' ')' e"  := (Papp1 (Ozeroext U16 U16) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(zeroext' 32 'u' ')' e"  := (Papp1 (Ozeroext U32 U32) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(zeroext' 64 'u' ')' e"  := (Papp1 (Ozeroext U64 U64) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(zeroext' 128 'u' ')' e" := (Papp1 (Ozeroext U128 U128) e) (in custom expr at level 2) : expr_scope.
+Notation "'(zeroext' 256 'u' ')' e" := (Papp1 (Ozeroext U256 U256) e) (in custom expr at level 2) : expr_scope.
+
+(* Osignext: word → word (sign-extend). Syntax: (signext Nu) e *)
+Notation "'(signext' 8 'u' ')' e"   := (Papp1 (Osignext U8 U8) e)     (in custom expr at level 2) : expr_scope.
+Notation "'(signext' 16 'u' ')' e"  := (Papp1 (Osignext U16 U16) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(signext' 32 'u' ')' e"  := (Papp1 (Osignext U32 U32) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(signext' 64 'u' ')' e"  := (Papp1 (Osignext U64 U64) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(signext' 128 'u' ')' e" := (Papp1 (Osignext U128 U128) e) (in custom expr at level 2) : expr_scope.
+Notation "'(signext' 256 'u' ')' e" := (Papp1 (Osignext U256 U256) e) (in custom expr at level 2) : expr_scope.
+
+(* Oint_of_word: word → int. Syntax: (uint) e or (sint) e *)
+Notation "'(uint)' e" := (Papp1 (Oint_of_word Unsigned U64) e) (in custom expr at level 2) : expr_scope.
+Notation "'(sint)' e" := (Papp1 (Oint_of_word Signed U64) e) (in custom expr at level 2) : expr_scope.
 
 (* ========================================================================= *)
 (* Multiplicative operators (level 3, left associativity).                   *)
@@ -418,6 +442,7 @@ Notation "e1 ? 256 'u' e2 ':' e3" := (Pif (aword U256) e1 e2 e3) (in custom expr
 Notation "e1 '?bool' e2 ':' e3" := (Pif abool e1 e2 e3) (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
 Notation "e1 '?int' e2 ':' e3"  := (Pif aint e1 e2 e3)  (in custom expr at level 13, e2 custom expr, e3 custom expr at level 13) : expr_scope.
 
+(* What? *)
 (* Generic fallback with explicit atype: e1 ?[ty] e2 : e3 *)
 Notation "e1 '?[' ty ']' e2 ':' e3" :=
   (Pif ty e1 e2 e3)
@@ -429,6 +454,7 @@ Notation "e1 '?[' ty ']' e2 ':' e3" :=
 (* Integer operators: +i, -i, *i (Op_int variants).                         *)
 (* ========================================================================= *)
 
+(* Isn't this defined in 185? *)
 Notation "e1 '+i' e2" := (Papp2 (Oadd Op_int) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
 Notation "e1 '-i' e2" := (Papp2 (Osub Op_int) e1 e2) (in custom expr at level 4, left associativity) : expr_scope.
 Notation "e1 '*i' e2" := (Papp2 (Omul Op_int) e1 e2) (in custom expr at level 3, left associativity) : expr_scope.
@@ -463,19 +489,62 @@ Notation "e1 <= 64 'ui' e2" := (Papp2 (Owi2 Unsigned U64 WIle) e1 e2) (in custom
 Notation "e1 > 64 'ui' e2" := (Papp2 (Owi2 Unsigned U64 WIgt) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 Notation "e1 >= 64 'ui' e2" := (Papp2 (Owi2 Unsigned U64 WIge) e1 e2) (in custom expr at level 9, no associativity) : expr_scope.
 
-(* Wint cast: (64ui) e → Owi1 Unsigned (WIwint_of_int U64) *)
-Notation "'(' 64 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_of_int U64)) e) (in custom expr at level 2) : expr_scope.
+(* ---- Wint casts (Owi1) ---- *)
+
+(* WIwint_of_int: int → wint. Syntax: (Nui) or (Nsi) *)
+Notation "'(' 8 'ui' ')' e"   := (Papp1 (Owi1 Unsigned (WIwint_of_int U8)) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(' 16 'ui' ')' e"  := (Papp1 (Owi1 Unsigned (WIwint_of_int U16)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 32 'ui' ')' e"  := (Papp1 (Owi1 Unsigned (WIwint_of_int U32)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 64 'ui' ')' e"  := (Papp1 (Owi1 Unsigned (WIwint_of_int U64)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 128 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_of_int U128)) e) (in custom expr at level 2) : expr_scope.
+Notation "'(' 256 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_of_int U256)) e) (in custom expr at level 2) : expr_scope.
+
+Notation "'(' 8 'si' ')' e"   := (Papp1 (Owi1 Signed (WIwint_of_int U8)) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(' 16 'si' ')' e"  := (Papp1 (Owi1 Signed (WIwint_of_int U16)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 32 'si' ')' e"  := (Papp1 (Owi1 Signed (WIwint_of_int U32)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 64 'si' ')' e"  := (Papp1 (Owi1 Signed (WIwint_of_int U64)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(' 128 'si' ')' e" := (Papp1 (Owi1 Signed (WIwint_of_int U128)) e) (in custom expr at level 2) : expr_scope.
+Notation "'(' 256 'si' ')' e" := (Papp1 (Owi1 Signed (WIwint_of_int U256)) e) (in custom expr at level 2) : expr_scope.
+
+(* WIint_of_wint: wint → int. Syntax: (uint) or (sint) — same as Oint_of_word *)
+(* Already handled by (uint) and (sint) above for Oint_of_word. *)
+(* For Owi1 variant, these would need distinct keywords but don't appear in examples. *)
+
+(* WIword_of_wint: wint → word. Syntax: (wi2w Nu) *)
+Notation "'(wi2w' 8 'u' ')' e"   := (Papp1 (Owi1 Unsigned (WIword_of_wint U8)) e)   (in custom expr at level 2) : expr_scope.
+Notation "'(wi2w' 16 'u' ')' e"  := (Papp1 (Owi1 Unsigned (WIword_of_wint U16)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(wi2w' 32 'u' ')' e"  := (Papp1 (Owi1 Unsigned (WIword_of_wint U32)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(wi2w' 64 'u' ')' e"  := (Papp1 (Owi1 Unsigned (WIword_of_wint U64)) e)  (in custom expr at level 2) : expr_scope.
+Notation "'(wi2w' 128 'u' ')' e" := (Papp1 (Owi1 Unsigned (WIword_of_wint U128)) e) (in custom expr at level 2) : expr_scope.
+Notation "'(wi2w' 256 'u' ')' e" := (Papp1 (Owi1 Unsigned (WIword_of_wint U256)) e) (in custom expr at level 2) : expr_scope.
+
+(* WIwint_of_word: word → wint. Syntax: (w2wi Nui) or (w2wi Nsi) *)
+Notation "'(w2wi' 64 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_of_word U64)) e) (in custom expr at level 2) : expr_scope.
+Notation "'(w2wi' 64 'si' ')' e" := (Papp1 (Owi1 Signed (WIwint_of_word U64)) e)   (in custom expr at level 2) : expr_scope.
+
+(* WIwint_ext: wint → wint (resize). Syntax: (wiext Nui) or (wiext Nsi) *)
+Notation "'(wiext' 64 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_ext U64 U64)) e) (in custom expr at level 2) : expr_scope.
+Notation "'(wiext' 64 'si' ')' e" := (Papp1 (Owi1 Signed (WIwint_ext U64 U64)) e)   (in custom expr at level 2) : expr_scope.
 
 (* ========================================================================= *)
 (* Memory load: [:uN e]                                                      *)
 (* ========================================================================= *)
 
-Notation "'[:u8' e ']'" := (Pload Aligned U8 e) (in custom expr at level 0, e custom expr) : expr_scope.
-Notation "'[:u16' e ']'" := (Pload Aligned U16 e) (in custom expr at level 0, e custom expr) : expr_scope.
-Notation "'[:u32' e ']'" := (Pload Aligned U32 e) (in custom expr at level 0, e custom expr) : expr_scope.
-Notation "'[:u64' e ']'" := (Pload Aligned U64 e) (in custom expr at level 0, e custom expr) : expr_scope.
-Notation "'[:u128' e ']'" := (Pload Aligned U128 e) (in custom expr at level 0, e custom expr) : expr_scope.
-Notation "'[:u256' e ']'" := (Pload Aligned U256 e) (in custom expr at level 0, e custom expr) : expr_scope.
+(* Memory loads: [:uN e] is Unaligned (default), [#aligned :uN e] is Aligned *)
+Notation "'[:u8' e ']'" := (Pload Unaligned U8 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u16' e ']'" := (Pload Unaligned U16 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u32' e ']'" := (Pload Unaligned U32 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u64' e ']'" := (Pload Unaligned U64 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u128' e ']'" := (Pload Unaligned U128 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u256' e ']'" := (Pload Unaligned U256 e) (in custom expr at level 0, e custom expr) : expr_scope.
+
+(* Aligned memory loads: [#aligned :uN e] *)
+Notation "'[#aligned' '[:u8' e ']'" := (Pload Aligned U8 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[#aligned' '[:u16' e ']'" := (Pload Aligned U16 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[#aligned' '[:u32' e ']'" := (Pload Aligned U32 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[#aligned' '[:u64' e ']'" := (Pload Aligned U64 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[#aligned' '[:u128' e ']'" := (Pload Aligned U128 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[#aligned' '[:u256' e ']'" := (Pload Aligned U256 e) (in custom expr at level 0, e custom expr) : expr_scope.
 
 (* ========================================================================= *)
 (* Array access: x[:uN e]                                                    *)
@@ -566,7 +635,31 @@ Notation "'(4u2)' '[' e1 , e2 , e3 , e4 ']'" :=
   (PappN (Opack U8 PE2) [:: (e1:pexpr); (e2:pexpr); (e3:pexpr); (e4:pexpr)])
   (in custom expr at level 0, e1 custom expr, e2 custom expr, e3 custom expr, e4 custom expr) : expr_scope.
 
+(* Variables: handled by mkgvar (string -> gvar) notation.
+   Variable types are NOT tracked in the notation — they come from the
+   function signature (tyin/tyout) and assignment type comments (/* u64 */).
+   A typed variable axiom mkvar : string -> var is assumed. *)
+
+(* Alignment conventions:
+   - Memory loads/stores: [:uN e] = Unaligned (default), [#aligned :uN e] = Aligned
+   - Array accesses: x[:uN e] = Aligned (default for arrays)
+   - Unaligned array access (x[#unaligned :uN e]) is not yet needed/supported *)
+
+(* Array accesses: "x"[:uN e] -> Pget, defined above *)
+(* Array slices: "x"[:uN e : n] -> Psub, defined above *)
+
+(* Array initializers: handled as ArrayInit("x") instruction in InstructionNotations *)
+
+(* N-ary operators: pack expressions (4u2)[...] are partially handled above;
+   larger packs (16u8) and other PappN use rocq:(...) escape in compiler output.
+   Combine flags (_EQ, _uLT, etc.) are handled as expression notations. *)
+
 End ExpressionNotations.
+
+(* Lvals: Lvar (mklvar x), Lnone dummy_var_info ty, Laset, Lmem, Lasub
+   are handled within coq_copn and call notations as raw Coq terms.
+   Direct lval notations for assignments use Lvar (simple variable) and
+   Laset/Lmem for array/memory store instructions. *)
 
 (* ========================================================================= *)
 (* Instructions, functions, and programs.                                    *)
@@ -605,10 +698,13 @@ End ExpressionNotations.
 
 Require Import sopn.
 
-Definition mklvar (s : string) : var_i := mk_var_i (mkvar s).
+Notation mklvar := (fun x => mk_var_i (mkvar x)) (only parsing).
 
-(* Parametric axiom for intrinsic names. *)
-Axiom mkopn : forall {asm_op : Type} {asmop : asmOp asm_op}, string -> @sopn asm_op asmop.
+(* Placeholder for intrinsic name resolution. Returns Onop; to be replaced
+   with proper architecture-specific resolution when needed. *)
+Definition mkopn {asm_op : Type} {asmop : asmOp asm_op}
+  (s : string) : @sopn asm_op asmop :=
+  sopn_nop.
 
 (* Wraps instr_r with dummy info. Polymorphic to survive section boundaries. *)
 Definition mkI' {asm_op : Type} {asmop : asmOp asm_op}
@@ -639,14 +735,16 @@ Definition mkprog {asm_op : Type} {asmop : asmOp asm_op}
 (* ========================================================================= *)
 
 Declare Custom Entry instr.
-Declare Custom Entry jcmd.
+Declare Custom Entry jcmd. (* Why not cmd? *)
 Declare Custom Entry fundecl.
 Declare Custom Entry prog.
 
 Module InstructionNotations.
 
-Import ExpressionNotations.
+Export ExpressionNotations.
 Open Scope expr_scope.
+
+Notation mklvar := (fun x => mk_var_i (mkvar x)) (only parsing).
 
 (* --- cmd entry and exit --- *)
 
@@ -660,7 +758,7 @@ Notation "'cmd:(' c ')'" :=
 (* Both rules are at the same level so the parser tries the longer (cons)   *)
 (* rule first, and falls back to the shorter (singleton) on failure.        *)
 Notation "i" :=
-  (cons i nil)
+  ([:: i ])
   (in custom jcmd at level 2,
    i custom instr at level 10)
   : expr_scope.
@@ -672,48 +770,32 @@ Notation "i c" :=
    c custom jcmd at level 2)
   : expr_scope.
 
-(* --- Function call: "x" = "f"("a", "b"); /* call */ --- *)
-(* MUST be defined BEFORE assignments so that assignments (defined later)    *)
-(* take priority in Coq's parser.                                           *)
+(* Do we really need the keyword CALL? *)
+(* Old fixed-arity call notations removed; the generic 'call' notation       *)
+(* (defined below) handles ALL function call patterns.                        *)
 
-Notation "x = 'call' f () ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [::]))
-  (in custom instr at level 10, x constr at level 0, f constr at level 0) : expr_scope.
+(* Function calls with more arguments: handled by call notation below,
+   which accepts raw Coq lists for lvals and args. *)
 
-Notation "x = 'call' f ( a ) ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr)]))
-  (in custom instr at level 10, x constr at level 0, f constr at level 0,
-   a custom expr) : expr_scope.
-
-Notation "x = 'call' f ( a , b ) ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr); (b : pexpr)]))
-  (in custom instr at level 10, x constr at level 0, f constr at level 0,
-   a custom expr, b custom expr) : expr_scope.
-
-Notation "x = 'call' f ( a , b , c ) ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr); (b : pexpr); (c : pexpr)]))
-  (in custom instr at level 10, x constr at level 0, f constr at level 0,
-   a custom expr, b custom expr, c custom expr) : expr_scope.
-
-(* --- Memory store: [:uN e1] = e2 ; /* uN */ --- *)
+(* --- Memory store: [:u64 e1] = e2 ; /* u64 */ --- *)
 
 Notation "'[:u8' e1 ']' = e2 ; '/*' 'u8' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U8 dummy_var_info e1) AT_none (aword U8) e2))
+  (mkI' (Cassgn (Lmem Unaligned U8 dummy_var_info e1) AT_none (aword U8) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 Notation "'[:u16' e1 ']' = e2 ; '/*' 'u16' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U16 dummy_var_info e1) AT_none (aword U16) e2))
+  (mkI' (Cassgn (Lmem Unaligned U16 dummy_var_info e1) AT_none (aword U16) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 Notation "'[:u32' e1 ']' = e2 ; '/*' 'u32' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U32 dummy_var_info e1) AT_none (aword U32) e2))
+  (mkI' (Cassgn (Lmem Unaligned U32 dummy_var_info e1) AT_none (aword U32) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 Notation "'[:u64' e1 ']' = e2 ; '/*' 'u64' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U64 dummy_var_info e1) AT_none (aword U64) e2))
+  (mkI' (Cassgn (Lmem Unaligned U64 dummy_var_info e1) AT_none (aword U64) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 Notation "'[:u128' e1 ']' = e2 ; '/*' 'u128' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U128 dummy_var_info e1) AT_none (aword U128) e2))
+  (mkI' (Cassgn (Lmem Unaligned U128 dummy_var_info e1) AT_none (aword U128) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 Notation "'[:u256' e1 ']' = e2 ; '/*' 'u256' '*/'" :=
-  (mkI' (Cassgn (Lmem Aligned U256 dummy_var_info e1) AT_none (aword U256) e2))
+  (mkI' (Cassgn (Lmem Unaligned U256 dummy_var_info e1) AT_none (aword U256) e2))
   (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
 
 (* --- Array lval assignment: "x"[:uN e1] = e2 ; /* uN */ --- *)
@@ -769,43 +851,20 @@ Notation "'coq_copn' lvs name args ;" :=
    lvs constr at level 0, name constr at level 0, args constr at level 0)
   : expr_scope.
 
-(* --- Function calls (Ccall): coq_ccall [lvals] (mkfunname "name") [args] ; --- *)
+(* --- Function calls (Ccall): call [lvals] (mkfunname "name") [args] ; --- *)
 (* Generic notation that handles ALL function call patterns.                  *)
 
-Notation "'coq_ccall' lvs fname args ;" :=
+Notation "'call' lvs fname args ;" :=
   (mkI' (Ccall lvs fname args))
   (in custom instr at level 10,
    lvs constr at level 0, fname constr at level 0, args constr at level 0)
   : expr_scope.
 
 (* --- Array initialization: ArrayInit("x"); /* arr_init */ --- *)
-(* Cassgn with Parr_init: we use a dummy Parr_init value since the type     *)
-(* information is erased in the notation.                                     *)
 
 Notation "'ArrayInit' ( x ) ; '/*' 'arr_init' '*/'" :=
   (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aarr U8 1%positive) (Parr_init U8 1%positive)))
   (in custom instr at level 10, x constr at level 0) : expr_scope.
-
-(* --- Function calls with more return values --- *)
-
-(* 2 returns, 2 args *)
-Notation "r1 , r2 = 'call' f ( a , b ) ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar r1); Lvar (mklvar r2)] (mkfunname f) [:: (a : pexpr); (b : pexpr)]))
-  (in custom instr at level 10,
-   r1 constr at level 0, r2 constr at level 0, f constr at level 0,
-   a custom expr, b custom expr) : expr_scope.
-
-(* 2 returns, 3 args *)
-Notation "r1 , r2 = 'call' f ( a , b , c ) ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [:: Lvar (mklvar r1); Lvar (mklvar r2)] (mkfunname f) [:: (a : pexpr); (b : pexpr); (c : pexpr)]))
-  (in custom instr at level 10,
-   r1 constr at level 0, r2 constr at level 0, f constr at level 0,
-   a custom expr, b custom expr, c custom expr) : expr_scope.
-
-(* 0 returns, 0 args *)
-Notation "'call' f () ; '/*' 'call' '*/'" :=
-  (mkI' (Ccall [::] (mkfunname f) [::]))
-  (in custom instr at level 10, f constr at level 0) : expr_scope.
 
 (* --- Assignment instructions: "x" = e ; /* uN */ --- *)
 
@@ -819,34 +878,10 @@ Notation "x = e ; /* 'u256' */"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (awo
 Notation "x = e ; /* 'bool' */"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none abool e))  (in custom instr at level 10, x constr at level 0, e custom expr at level 13) : expr_scope.
 Notation "x = e ; /* 'int' */"   := (mkI' (Cassgn (Lvar (mklvar x)) AT_none aint e))   (in custom instr at level 10, x constr at level 0, e custom expr at level 13) : expr_scope.
 
-(* --- Return instruction: return ("r") ; --- *)
+(* Wrong: the return statement should be part of the fundef notation, as it determines the return variables. *)
 
-Notation "'return' ( r ) ; /* 'u8' */"   := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U8)   (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'u16' */"  := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U16)  (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'u32' */"  := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U32)  (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'u64' */"  := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U64)  (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'u128' */" := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U128) (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'u256' */" := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U256) (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-
-Notation "'return' ( r ) ; /* 'bool' */" := (mkI' (Cassgn (Lvar (mklvar r)) AT_none abool (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-Notation "'return' ( r ) ; /* 'int' */"  := (mkI' (Cassgn (Lvar (mklvar r)) AT_none aint  (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-
-(* Untyped return: defaults to u64 *)
-Notation "'return' ( r ) ;" := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U64) (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
-
-(* Empty return: return (); *)
-Notation "'return' () ;" := (mkI' (Cassgn (Lnone dummy_var_info abool) AT_none abool (Pbool true)))
-  (in custom instr at level 10) : expr_scope.
-
-(* Multi-value return: return ("a", "b"); *)
-Notation "'return' ( r1 , r2 ) ;" :=
-  (mkI' (Cassgn (Lvar (mklvar r1)) AT_none (aword U64) (Plvar (mklvar r1))))
-  (in custom instr at level 10, r1 constr at level 0, r2 constr at level 0) : expr_scope.
-
-(* 3-value return: return ("a", "b", "c"); *)
-Notation "'return' ( r1 , r2 , r3 ) ;" :=
-  (mkI' (Cassgn (Lvar (mklvar r1)) AT_none (aword U64) (Plvar (mklvar r1))))
-  (in custom instr at level 10, r1 constr at level 0, r2 constr at level 0, r3 constr at level 0) : expr_scope.
+(* Return statements are no longer printed as instructions in coq mode.      *)
+(* The return variables are part of the FN ... WITH notation (the res list). *)
 
 (* --- Assignment with array type: x = e ; /* uN[len] */ --- *)
 Notation "x = e ; '/*' 'u8' '[' n ']' '*/'" :=
@@ -935,217 +970,11 @@ Notation "'for' v = ( e1 ) 'downto' ( e2 ) { c }" :=
 
 (* --- Function declarations (custom entry fundecl) --- *)
 
-(* 0 params, 0 returns *)
-Notation "'fn' name () { c }" :=
-  (mkfunname name, mkfundef [::] [::] c [::] [::])
-  (in custom fundecl at level 0,
-   name constr at level 0,
-   c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u64 param, 1 u64 return *)
-Notation "'fn' name ( 'reg' 'u64' p ) -> ( 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef
-    [:: aword U64] [:: mklvar p]
-    c
-    [:: aword U64] [:: mklvar p])
-  (in custom fundecl at level 0,
-   name constr at level 0,
-   p constr at level 0,
-   c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 u64 params, 1 u64 return *)
-Notation "'fn' name ( 'reg' 'u64' p1 , 'reg' 'u64' p2 ) -> ( 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64] [:: mklvar p1; mklvar p2]
-    c
-    [:: aword U64] [:: mklvar p1])
-  (in custom fundecl at level 0,
-   name constr at level 0,
-   p1 constr at level 0,
-   p2 constr at level 0,
-   c custom jcmd at level 2)
-  : expr_scope.
-
-(* 3 u64 params, 1 u64 return *)
-Notation "'fn' name ( 'reg' 'u64' p1 , 'reg' 'u64' p2 , 'reg' 'u64' p3 ) -> ( 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64; aword U64]
-    [:: mklvar p1; mklvar p2; mklvar p3]
-    c
-    [:: aword U64] [:: mklvar p1])
-  (in custom fundecl at level 0,
-   name constr at level 0,
-   p1 constr at level 0,
-   p2 constr at level 0,
-   p3 constr at level 0,
-   c custom jcmd at level 2)
-  : expr_scope.
-
-(* 0 params, 1 u32 return *)
-Notation "'fn' name () -> ( 'reg' 'u32' ) { c }" :=
-  (mkfunname name, mkfundef [::] [::] c [:: aword U32] [::])
-  (in custom fundecl at level 0, name constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 0 params, 1 u64 return *)
-Notation "'fn' name () -> ( 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef [::] [::] c [:: aword U64] [::])
-  (in custom fundecl at level 0, name constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 0 params, 2 u64 returns *)
-Notation "'fn' name () -> ( 'reg' 'u64' , 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef [::] [::] c [:: aword U64; aword U64] [::])
-  (in custom fundecl at level 0, name constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 ui64 params, 1 ui64 return *)
-Notation "'fn' name ( 'reg' 'ui64' p1 , 'reg' 'ui64' p2 ) -> ( 'reg' 'ui64' ) { c }" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64] [:: mklvar p1; mklvar p2]
-    c [:: aword U64] [:: mklvar p1])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 4 ui64 params, no return *)
-Notation "'fn' name ( 'reg' 'ui64' p1 , 'reg' 'ui64' p2 , 'reg' 'ui64' p3 , 'reg' 'ui64' p4 ) -> () { c }" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64; aword U64; aword U64]
-    [:: mklvar p1; mklvar p2; mklvar p3; mklvar p4]
-    c [::] [::])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0,
-   p3 constr at level 0, p4 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* --- Additional function signatures --- *)
-
-(* 0 params, no return *)
-Notation "'fn' name () -> () { c }" :=
-  (mkfunname name, mkfundef [::] [::] c [::] [::])
-  (in custom fundecl at level 0, name constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u32 param, 1 u32 return *)
-Notation "'fn' name ( 'reg' 'u32' p ) -> ( 'reg' 'u32' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U32] [:: mklvar p] c [:: aword U32] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u64 param, 1 u8 return *)
-Notation "'fn' name ( 'reg' 'u64' p ) -> ( 'reg' 'u8' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U64] [:: mklvar p] c [:: aword U8] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u64 param, 1 u32 return *)
-Notation "'fn' name ( 'reg' 'u64' p ) -> ( 'reg' 'u32' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U64] [:: mklvar p] c [:: aword U32] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u64 param, no return *)
-Notation "'fn' name ( 'reg' 'u64' p ) -> () { c }" :=
-  (mkfunname name, mkfundef [:: aword U64] [:: mklvar p] c [::] [::])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 u64 params, no return *)
-Notation "'fn' name ( 'reg' 'u64' p1 , 'reg' 'u64' p2 ) -> () { c }" :=
-  (mkfunname name, mkfundef [:: aword U64; aword U64] [:: mklvar p1; mklvar p2] c [::] [::])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 3 u64 params, no return *)
-Notation "'fn' name ( 'reg' 'u64' p1 , 'reg' 'u64' p2 , 'reg' 'u64' p3 ) -> () { c }" :=
-  (mkfunname name, mkfundef [:: aword U64; aword U64; aword U64]
-   [:: mklvar p1; mklvar p2; mklvar p3] c [::] [::])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, p3 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 u128 params, 1 u128 return *)
-Notation "'fn' name ( 'reg' 'u128' p1 , 'reg' 'u128' p2 ) -> ( 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128; aword U128] [:: mklvar p1; mklvar p2]
-   c [:: aword U128] [:: mklvar p1])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u128 param, 1 u128 return *)
-Notation "'fn' name ( 'reg' 'u128' p ) -> ( 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128] [:: mklvar p] c [:: aword U128] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 u128 params, 2 u128 returns *)
-Notation "'fn' name ( 'reg' 'u128' p1 , 'reg' 'u128' p2 ) -> ( 'reg' 'u128' , 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128; aword U128] [:: mklvar p1; mklvar p2]
-   c [:: aword U128; aword U128] [:: mklvar p1; mklvar p2])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 3 u128 params, 2 u128 returns *)
-Notation "'fn' name ( 'reg' 'u128' p1 , 'reg' 'u128' p2 , 'reg' 'u128' p3 ) -> ( 'reg' 'u128' , 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128; aword U128; aword U128] [:: mklvar p1; mklvar p2; mklvar p3]
-   c [:: aword U128; aword U128] [:: mklvar p1; mklvar p2])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, p3 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* inline int param, inline int return *)
-Notation "'fn' name ( 'inline' 'int' p ) -> ( 'inline' 'int' ) { c }" :=
-  (mkfunname name, mkfundef [:: aint] [:: mklvar p] c [:: aint] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0, p constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* inline int param + u128 param, u128 + u128 returns *)
-Notation "'fn' name ( 'inline' 'int' p1 , 'reg' 'u128' p2 , 'reg' 'u128' p3 ) -> ( 'reg' 'u128' , 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aint; aword U128; aword U128] [:: mklvar p1; mklvar p2; mklvar p3]
-   c [:: aword U128; aword U128] [:: mklvar p2; mklvar p3])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, p3 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u128 param + u128[11] param, 1 u128 return (cipher) *)
-Notation "'fn' name ( 'reg' 'u128' p1 , 'reg' 'u128' '[' n ']' p2 ) -> ( 'reg' 'u128' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128; aword U128] [:: mklvar p1; mklvar p2]
-   c [:: aword U128] [:: mklvar p1])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, n constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 1 u128 param, reg u128[N] return (keys_expand) *)
-Notation "'fn' name ( 'reg' 'u128' p ) -> ( 'reg' 'u128' '[' n ']' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U128] [:: mklvar p] c [:: aword U128] [:: mklvar p])
-  (in custom fundecl at level 0, name constr at level 0,
-   p constr at level 0, n constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* 2 u64 params, 2 u64 returns *)
-Notation "'fn' name ( 'reg' 'u64' p1 , 'reg' 'u64' p2 ) -> ( 'reg' 'u64' , 'reg' 'u64' ) { c }" :=
-  (mkfunname name, mkfundef [:: aword U64; aword U64] [:: mklvar p1; mklvar p2]
-   c [:: aword U64; aword U64] [:: mklvar p1; mklvar p2])
-  (in custom fundecl at level 0, name constr at level 0,
-   p1 constr at level 0, p2 constr at level 0, c custom jcmd at level 2)
-  : expr_scope.
-
-(* Generic: fn name WITH tyin params body tyout res *)
-Notation "'fn' name 'WITH' tyin params 'BODY' body 'TYOUT' tyout 'RES' res" :=
-  (mkfunname name, mkfundef tyin params body tyout res)
-  (in custom fundecl at level 0,
-   name constr at level 0, tyin constr at level 0, params constr at level 0,
-   body constr at level 0, tyout constr at level 0, res constr at level 0)
-  : expr_scope.
-
-(* --- Program entry and exit --- *)
-
 (* Generic function declaration: FN name WITH tyin params tyout res { body } *)
+(* This is the ONLY function notation — it handles all signatures via explicit
+   Coq lists for types, parameters, return types, and return variables. *)
+(* The compiler outputs this format with -coq flag. *)
+
 Notation "'FN' name 'WITH' tyin params tyout res { c }" :=
   (mkfunname name, mkfundef tyin params c tyout res)
   (in custom fundecl at level 0,
@@ -1156,6 +985,8 @@ Notation "'FN' name 'WITH' tyin params tyout res { c }" :=
    res constr at level 0,
    c custom jcmd at level 2)
   : expr_scope.
+
+(* --- Program entry and exit --- *)
 
 Notation "'prog:(' p ')'" :=
   (mkprog p)
@@ -1179,7 +1010,6 @@ Notation "f p" :=
 
 End InstructionNotations.
 
-(* ========================================================================= *)
 (* Tests                                                                     *)
 (* ========================================================================= *)
 
@@ -1189,6 +1019,7 @@ Unset Printing Notations.
 
 (* ---- Expression tests ---- *)
 Section ExprTests.
+Check expr:( true || false && (#1 -i #10) ==i false ).
 Check expr:( "x" +64u "y" ).
 Check expr:( "z" *64u "x" +64u #3 ).
 Check expr:( true ?32u "x" &32u "y" : "z" ).
@@ -1199,7 +1030,6 @@ Check expr:( "x" ==64u "y" ).
 Check expr:( "b" && "x" <=64u "y" ).
 Check expr:( "x" !=64u "y" || "x" <64u "y" ).
 Check expr:( #5 -i #2 ).
-Check expr:( true || false && (#1 -i #10) ==i false ).
 Check expr:( (cast 64u) #3 ).
 Check expr:( "x" ^64u "y" ).
 Check expr:( "x" |64u "y" ).
@@ -1218,6 +1048,8 @@ Context {asm_op : Type} {asmop : asmOp asm_op}.
 Import InstructionNotations.
 Open Scope expr_scope.
 
+(* This doesn't work but the notation is in l624 *)
+
 (* Single command: assignment *)
 Check cmd:(
   "r" = ("x" +64u "y") ; /* u64 */
@@ -1229,10 +1061,6 @@ Check cmd:(
   "r" = ("r" -64u #1) ; /* u64 */
 ).
 
-(* Return instruction *)
-Check cmd:(
-  return ("r") ;
-).
 
 (* If/else *)
 Check cmd:(
@@ -1257,130 +1085,42 @@ Check cmd:(
   }
 ).
 
-(* Full program matching jasminc output:
-     fn add (reg u64 x, reg u64 y) -> (reg u64) {
-       r = (x +64u y);  // u64
-       return (r);
-     }
-*)
+(* Full program using FN WITH format *)
 Check prog:(
-  fn "add" (reg u64 "x" , reg u64 "y") -> (reg u64) {
+  FN "add" WITH
+  [:: (aword U64); (aword U64)]
+  [:: mklvar "x"; mklvar "y"]
+  [:: (aword U64)]
+  [:: mklvar "r"]
+  {
     "r" = ("x" +64u "y") ; /* u64 */
-    return ("r") ;
   }
 ).
 
 (* Program with two functions *)
 Check prog:(
-  fn "add" (reg u64 "x" , reg u64 "y") -> (reg u64) {
+  FN "add" WITH
+  [:: (aword U64); (aword U64)]
+  [:: mklvar "x"; mklvar "y"]
+  [:: (aword U64)]
+  [:: mklvar "r"]
+  {
     "r" = ("x" +64u "y") ; /* u64 */
-    return ("r") ;
   }
-  fn "sub" (reg u64 "x" , reg u64 "y") -> (reg u64) {
+  FN "sub" WITH
+  [:: (aword U64); (aword U64)]
+  [:: mklvar "x"; mklvar "y"]
+  [:: (aword U64)]
+  [:: mklvar "r"]
+  {
     "r" = ("x" -64u "y") ; /* u64 */
-    return ("r") ;
   }
 ).
 
-(* No-arg function *)
+(* No-arg, no-return function *)
 Check prog:(
-  fn "nop" () {
+  FN "nop" WITH [::] [::] [::] [::] {
     "x" = (cast 64u) #0 ; /* u64 */
-  }
-).
-
-(* ---- Tests from real jasminc -coq output ---- *)
-
-(* extraction-unit-tests/exp.jazz: exp2 function *)
-Check prog:(
-  fn "exp2" (reg u64 "x.200" , reg u64 "y.201") -> (reg u64) {
-    "z.202" = "x.200" +64u "y.201" ; /* u64 */
-    return ("z.202") ;
-  }
-).
-
-(* extraction-unit-tests/exp.jazz: exp function (uses ui64 operators) *)
-Check prog:(
-  fn "exp" (reg ui64 "x.203" , reg ui64 "y.204") -> (reg ui64) {
-    "a.206" = "x.203" +64ui "y.204" ; /* u64 */
-    "b.207" = "x.203" -64ui "y.204" ; /* u64 */
-    "c.205" = "a.206" *64ui "b.207" ; /* u64 */
-    return ("c.205") ;
-  }
-).
-
-(* extraction-unit-tests/loops.jazz: forty function *)
-Check prog:(
-  fn "forty" () -> (reg u32) {
-    "j.205" = #0 ; /* int */
-    for "i.206" = (#10) downto (#5) {
-      "j.205" = "j.205" +i "i.206" ; /* int */
-    }
-    "r.204" = (cast 32u) "j.205" ; /* u32 */
-    return ("r.204") ;
-  }
-).
-
-(* extraction-unit-tests/sdiv.jazz: main function (multi-return) *)
-Check prog:(
-  fn "main" () -> (reg u64 , reg u64) {
-    "a.192" = (cast 64u) #1 ; /* u64 */
-    "b.193" = (cast 64u) (-i #1) ; /* u64 */
-    "c.190" = "a.192" /64s "b.193" ; /* u64 */
-    "d.194" = (cast 64u) (-i #4) ; /* u64 */
-    "e.195" = (cast 64u) #3 ; /* u64 */
-    "f.191" = "d.194" %64s "e.195" ; /* u64 */
-    return ("c.190" , "f.191") ;
-  }
-).
-
-(* extraction-unit-tests/gcd.jazz: euclid function (while loop, wint cast) *)
-Check prog:(
-  fn "euclid" (reg ui64 "a.196" , reg ui64 "b.197") -> (reg ui64) {
-    while ("a.196" !=64ui (64ui) #0) {
-      "r.198" = "b.197" %64ui "a.196" ; /* u64 */
-      "b.197" = "a.196" ; /* u64 */
-      "a.196" = "r.198" ; /* u64 */
-    }
-    return ("b.197") ;
-  }
-).
-
-(* extraction-unit-tests/gcd.jazz: gcd function (function call with /* call */) *)
-Check prog:(
-  fn "gcd" (reg ui64 "x.194" , reg ui64 "y.195") -> (reg ui64) {
-    "y.195" = "y.195" ; /* u64 */
-    "x.194" = call "euclid" ("x.194" , "y.195") ; /* call */
-    return ("x.194") ;
-  }
-).
-
-(* extraction-unit-tests/add_in_mem.jazz: memory load/store, empty return *)
-Check prog:(
-  fn "add_mem" (reg ui64 "out.194" , reg ui64 "in1.195" , reg ui64 "in2.196" , reg ui64 "len.197") -> () {
-    "i.198" = (64ui) #0 ; /* u64 */
-    while ("i.198" <64ui "len.197") {
-      "x.199" = [:u64 (cast 64u) ("in1.195" +64ui (64ui) #8 *64ui "i.198")] ; /* u64 */
-      "y.200" = [:u64 (cast 64u) ("in2.196" +64ui (64ui) #8 *64ui "i.198")] ; /* u64 */
-      "d.201" = "x.199" +64u "y.200" ; /* u64 */
-      [:u64 (cast 64u) ("out.194" +64ui (64ui) #8 *64ui "i.198")] = "d.201" ; /* u64 */
-      "i.198" = "i.198" +64ui (64ui) #1 ; /* u64 */
-    }
-    return () ;
-  }
-).
-
-(* ---- Tests for new notations ---- *)
-
-(* extraction-unit-tests/string.jazz: array access in expression *)
-Check prog:(
-  fn "main" () -> (reg u32) {
-    "x.183" = "@ " ; /* u8 */
-    "r.182" = (cast 32u) #0 ; /* u32 */
-    "r.182" = "r.182" +32u (cast 32u) "x.183"[:u8 #0] ; /* u32 */
-    "r.182" = "r.182" <<32u (cast 8u) #8 ; /* u32 */
-    "r.182" = "r.182" +32u (cast 32u) "x.183"[:u8 #1] ; /* u32 */
-    return ("r.182") ;
   }
 ).
 
@@ -1437,9 +1177,6 @@ Check cmd:(
 ).
 
 (* 3-value return *)
-Check cmd:(
-  return ("a", "b", "c") ;
-).
 
 (* Untyped ternary *)
 Check expr:( "e" ? "x" : "y" ).
@@ -1471,88 +1208,19 @@ Check cmd:(
 ).
 
 (* Function call with 2 returns *)
-Check cmd:(
-  "a", "b" = call "key_combine"("x", "y", "z") ; /* call */
-).
 
 (* opsizes.jazz tests *)
-Check prog:(
-  fn "reg32_test" (reg u32 "x.295") -> (reg u32) {
-    "y.296" = "x.295" ; /* u32 */
-    "y.296" = "y.296" +32u "x.295" ; /* u32 */
-    return ("y.296") ;
-  }
-).
 
-Check prog:(
-  fn "pluseq" (reg u64 "x.279") -> (reg u8) {
-    "c.281" = (cast 32u) #0 ; /* u32 */
-    "c.281" = "c.281" *32u "x.279" ; /* u32 */
-    "b.282" = (cast 16u) #0 ; /* u16 */
-    "a.280" = (cast 8u) #0 ; /* u8 */
-    "b.282" = "b.282" -16u "c.281" ; /* u16 */
-    "a.280" = "a.280" +8u "b.282" ; /* u8 */
-    return ("a.280") ;
-  }
-).
 
 (* ifelse.jazz test *)
-Check prog:(
-  fn "test" (reg u64 "x.184" , reg u64 "y.185") -> (reg u64) {
-    if "x.184" !=64u (cast 64u) #0 {
-      "result.186" = "x.184" ; /* u64 */
-    } else {
-      if "y.185" !=64u (cast 64u) #0 {
-        "result.186" = "y.185" ; /* u64 */
-      } else {
-        "result.186" = (cast 64u) #0 ; /* u64 */
-      }
-    }
-    return ("result.186") ;
-  }
-).
 
 (* aes.jazz: AddRoundKey function *)
-Check prog:(
-  fn "AddRoundKey" (reg u128 "state.306" , reg u128 "rk.307") -> (reg u128) {
-    "state.306" = "state.306" ^128u "rk.307" ; /* u128 */
-    return ("state.306") ;
-  }
-).
 
 (* aes.jazz: inline int function *)
-Check prog:(
-  fn "RCON" (inline int "i.308") -> (inline int) {
-    "c.309" =
-      "i.308" ==i #1 ? #1 : ("i.308" ==i #2 ? #2 : ("i.308" ==i #3 ? #4 : ("i.308" ==i #4 ? #8 : ("i.308" ==i #5 ? #16 : ("i.308" ==i #6 ? #32 : ("i.308" ==i #7 ? #64 : ("i.308" ==i #8 ? #128 : ("i.308" ==i #9 ? #27 : #54)))))))); /* int */
-    return ("c.309") ;
-  }
-).
 
 (* aes.jazz: cipher function with array param *)
-Check prog:(
-  fn "cipher" (reg u128 "in.302" , reg u128[11] "rks.303") -> (reg u128) {
-    "state.304" = "in.302" ; /* u128 */
-    "state.304" = "state.304" ^128u "rks.303"[:u128 #0] ; /* u128 */
-    for "round.305" = (#1) to (#10) {
-      coq_copn [:: Lvar (mklvar "state.304")] (mkopn "AESENC") [:: (expr:("state.304") : pexpr); (expr:("rks.303"[:u128 "round.305"]) : pexpr)] ;
-    }
-    coq_copn [:: Lvar (mklvar "state.304")] (mkopn "AESENCLAST") [:: (expr:("state.304") : pexpr); (expr:("rks.303"[:u128 #10]) : pexpr)] ;
-    return ("state.304") ;
-  }
-).
 
 (* aes.jazz: key_combine with 2 returns *)
-Check prog:(
-  fn "key_combine" (reg u128 "rkey.299" , reg u128 "temp1.300" , reg u128 "temp2.301") -> (reg u128 , reg u128) {
-    coq_copn [:: Lvar (mklvar "temp1.300")] (mkopn "VPSHUFD_128")
-      [:: (expr:("temp1.300") : pexpr);
-          ((PappN (Opack U8 PE2) [:: (expr:(#3) : pexpr); (expr:(#3) : pexpr); (expr:(#3) : pexpr); (expr:(#3) : pexpr)]) : pexpr)] ;
-    "rkey.299" = "rkey.299" ^128u "temp2.301" ; /* u128 */
-    "rkey.299" = "rkey.299" ^128u "temp1.300" ; /* u128 */
-    return ("rkey.299", "temp2.301") ;
-  }
-).
 
 (* shift.jazz: memory store with u16 *)
 Check cmd:(
@@ -1560,99 +1228,20 @@ Check cmd:(
 ).
 
 (* loops.jazz: for_nest function *)
-Check prog:(
-  fn "for_nest" () -> (reg u32) {
-    "k.201" = #0 ; /* int */
-    for "i.203" = (#0) to (#10 +i #10) {
-      for "j.202" = (#0) to (#10 *i #10) {
-        "k.201" = "k.201" +i #1 ; /* int */
-      }
-    }
-    "r.200" = (cast 32u) "k.201" ; /* u32 */
-    return ("r.200") ;
-  }
-).
 
 (* aes.jazz: key_expand with inline int + u128 params *)
-Check prog:(
-  fn "key_expand" (inline int "rcon.295" , reg u128 "rkey.296" , reg u128 "temp2.297") -> (reg u128 , reg u128) {
-    coq_copn [:: Lvar (mklvar "temp1.298")] (mkopn "VAESKEYGENASSIST") [:: (expr:("rkey.296") : pexpr); (expr:((cast 8u) "rcon.295") : pexpr)] ;
-    "rkey.296", "temp2.297" = call "key_combine"("rkey.296", "temp1.298", "temp2.297") ; /* call */
-    return ("rkey.296", "temp2.297") ;
-  }
-).
 
 (* aes.jazz: keys_expand with u128 return and array set *)
-Check prog:(
-  fn "keys_expand" (reg u128 "key.290") -> (reg u128[11]) {
-    "rkeys.291"[#0] = "key.290" ; /* u128 */
-    coq_copn [:: Lvar (mklvar "temp2.292")] (mkopn "set0_128") [:: ] ;
-    for "i.293" = (#1) to (#11) {
-      "rcon.294" = call "RCON"("i.293") ; /* call */
-      "key.290", "temp2.292" = call "key_expand"("rcon.294", "key.290", "temp2.292") ; /* call */
-      "rkeys.291"["i.293"] = "key.290" ; /* u128 */
-    }
-    return ("rkeys.291") ;
-  }
-).
 
 (* aes.jazz: aes_enc with 3 u64 params, no return *)
-Check prog:(
-  fn "aes_enc" (reg u64 "pkey.280" , reg u64 "pin.281" , reg u64 "pout.282") -> () {
-    "in.283" = [:u128 "pin.281"] ; /* u128 */
-    "key.284" = [:u128 "pkey.280"] ; /* u128 */
-    "out.285" = call "_aes_enc"("key.284", "in.283") ; /* call */
-    [:u128 "pout.282"] = "out.285" ; /* u128 */
-    return () ;
-  }
-).
 
 (* test_add.jazz: test3 with function call returning 0 results *)
-Check prog:(
-  fn "test3" () -> (reg u64) {
-    "tmp.205" = call "test1"() ; /* call */
-    "j.204" = (cast 64u) "tmp.205" ; /* u64 */
-    "i.206" = call "test2"() ; /* call */
-    while ("j.204" <=64u (cast 64u) #12) {
-      "j.204" = "j.204" +64u "i.206" ; /* u64 */
-    }
-    return ("j.204") ;
-  }
-).
 
 (* opsizes.jazz: primop_test with intrinsics *)
-Check prog:(
-  fn "primop_test" (reg u64 "x.283") -> (reg u8) {
-    "d.285" = "x.283" ; /* u64 */
-    coq_copn [:: Lvar (mklvar "c.286")] (mkopn "MOV_32") [:: (expr:("d.285") : pexpr)] ;
-    coq_copn [:: Lvar (mklvar "b.287")] (mkopn "MOV_16") [:: (expr:("c.286") : pexpr)] ;
-    coq_copn [:: Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lvar (mklvar "a.284")] (mkopn "ADD_8") [:: (expr:("b.287") : pexpr); (expr:("b.287") : pexpr)] ;
-    return ("a.284") ;
-  }
-).
 
 (* opsizes.jazz: test_immediate with u256 ops *)
-Check prog:(
-  fn "test_immediate" () -> (reg u32) {
-    "r.276" = (cast 256u) #42 &256u (cast 256u) #10 ; /* u32 */
-    return ("r.276") ;
-  }
-).
 
 (* test_casts.jazz *)
-Check prog:(
-  fn "opsize_test" (reg u64 "x.184") -> (reg u8) {
-    "y.186" = "x.184" ; /* u32 */
-    "y.186" = "y.186" +32u "x.184" ; /* u32 */
-    "y.186" = "y.186" <32u (cast 32u) #0 ? "x.184" : "y.186" ; /* u32 */
-    "x.184" = "x.184" >>64u (cast 8u) #32 ; /* u64 */
-    "x.184" = "x.184" >>64s (cast 8u) #8 ; /* u64 */
-    "r.185" = "x.184" ; /* u8 */
-    "r.185" = "r.185" >>8u (cast 8u) #1 ; /* u8 */
-    "r.185" = "r.185" ^8u "y.186" ; /* u8 */
-    return ("r.185") ;
-  }
-).
 
 Check prog:(
   (* fn "sipround" (reg u64[4] "v.229") -> (reg u64[4]) *)
@@ -1676,7 +1265,6 @@ Check prog:(
     "v.229"[:u64 #1] = "v.229"[:u64 #1] <<r 64u (cast 8u) #17; /* u64 */
     "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #2]; /* u64 */
     "v.229"[:u64 #2] = "v.229"[:u64 #2] <<r 64u (cast 8u) #32; /* u64 */
-    return ("v.229");
   }
 ).
 

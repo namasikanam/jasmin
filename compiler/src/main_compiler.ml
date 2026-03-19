@@ -196,6 +196,7 @@ let main () =
           source_prog
         |> fun () -> exit 0
       else
+        (* This should be in a different entry point jasmin2rocq like for EC *)
         let pp = if !Glob_options.print_coq
                  then Printer.pp_prog_coq ~debug Arch.pointer_data Arch.msf_size Arch.asmOp
                  else Printer.pp_prog ~debug Arch.pointer_data Arch.msf_size Arch.asmOp in

@@ -330,7 +330,7 @@ let rec pp_gi ~debug pp_info pp_len pp_opn pp_var fmt i =
 
   | Ccall(x, f, e) ->
     if !coq_mode then
-      F.fprintf fmt "@[<hov 2>coq_ccall [:: %a] (mkfunname \"%s\") [:: %a] ;@]"
+      F.fprintf fmt "@[<hov 2>call [:: %a] (mkfunname \"%s\") [:: %a] ;@]"
         (pp_list ";@ " (pp_coq_lval ~debug pp_len pp_var)) x
         f.fn_name
         (pp_list ";@ " (pp_coq_expr ~debug pp_len pp_var)) e
@@ -501,12 +501,10 @@ let pp_var ~debug =
     else
       fun fmt x -> F.fprintf fmt "%s" x.v_name
 
-(* Coq-compatible variant: quotes variable names for the Rocq notation system *)
-let pp_var_coq ~debug =
-    if debug then
-      fun fmt x -> F.fprintf fmt "\"%s.%s\"" x.v_name (string_of_uid x.v_id)
-    else
-      fun fmt x -> F.fprintf fmt "\"%s\"" x.v_name
+(* Coq-compatible variant: always prints "name.id" with quotes.
+   The unique id suffix is always included to avoid name collisions. *)
+let pp_var_coq ~debug:_ =
+    fun fmt x -> F.fprintf fmt "\"%s.%s\"" x.v_name (string_of_uid x.v_id)
 
 let pp_dvar ~debug fmt x =
   let pp_dloc fmt d =
@@ -580,6 +578,7 @@ let pp_prog ~debug pd msfsize asmOp fmt ((gd, funcs):('info, 'asm) Prog.prog) =
      (pp_globs pp_var) gd
      (pp_list "@ @ " (pp_fun_ ~debug pp_opn pp_var)) (List.rev funcs)
 
+(* Why print variable declarations? *)
 (* Coq-compatible printer: sets coq_mode, quotes names, uses (cast Nu), sized comparisons *)
 (* Coq-compatible function printer using generic format:
    FN "name" WITH [tyin] [params] { body } [tyout] [results]
@@ -595,9 +594,6 @@ let pp_coq_atype fmt v =
 
 let pp_fun_coq_ ~debug ?pp_locals:_ ?(pp_info=pp_noinfo) pp_opn pp_var fmt fd =
   let ret = List.map L.unloc fd.f_ret in
-  let pp_ret fmt () =
-    F.fprintf fmt "return @[(%a)@];"
-      (pp_list ",@ " pp_var) ret in
   (* Print human-readable header as a comment *)
   let pp_vd =  pp_var_decl pp_var pp_len in
   F.fprintf fmt "@[(* fn \"%s\" (%a) -> (%a) *)@]@ "
@@ -608,14 +604,13 @@ let pp_fun_coq_ ~debug ?pp_locals:_ ?(pp_info=pp_noinfo) pp_opn pp_var fmt fd =
   let pp_mklvar fmt v = F.fprintf fmt "mklvar %a" pp_var v in
   let args_vars = List.map (fun v -> v) fd.f_args in
   let ret_vars = ret in
-  F.fprintf fmt "@[<v>FN \"%s\" WITH@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ {@   @[<v>%a@ %a@]@ }@]"
+  F.fprintf fmt "@[<v>FN \"%s\" WITH@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ {@   @[<v>%a@]@ }@]"
     fd.f_name.fn_name
     (pp_list ";@ " pp_coq_atype) args_vars
     (pp_list ";@ " pp_mklvar) args_vars
     (pp_list ";@ " pp_coq_atype) ret_vars
     (pp_list ";@ " pp_mklvar) ret_vars
     (pp_gc ~debug pp_info pp_len pp_opn pp_var) fd.f_body
-    pp_ret ()
 
 let pp_prog_coq ~debug pd msfsize asmOp fmt (p:('info, 'asm) Prog.prog) =
   coq_mode := true;
