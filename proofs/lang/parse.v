@@ -123,6 +123,8 @@ Notation "! 256 'u' e" := (Papp1 (Olnot U256) e) (in custom expr at level 2) : e
 
 (* ---- Casts between all types ---- *)
 
+(* TODO: whether we really need cast. *)
+
 (* Oword_of_int: int → word. Syntax: (cast Nu) e *)
 Notation "'(cast' 8 'u' ')' e"   := (Papp1 (Oword_of_int U8) e)   (in custom expr at level 2) : expr_scope.
 Notation "'(cast' 16 'u' ')' e"  := (Papp1 (Oword_of_int U16) e)  (in custom expr at level 2) : expr_scope.
@@ -712,6 +714,7 @@ Definition mkI' {asm_op : Type} {asmop : asmOp asm_op}
   MkI dummy_instr_info ir.
 
 (* Build a unit fundef (pre-stack-allocation). *)
+(* TODO: correctly build assgn_tag *)
 Definition mkfundef {asm_op : Type} {asmop : asmOp asm_op}
   (tyin : seq atype) (params : seq var_i)
   (body : seq (@instr asm_op asmop)) (tyout : seq atype) (res : seq var_i)
@@ -1187,6 +1190,7 @@ Check expr:( _uLT("a", "b", "c", "d") ).
 Check expr:( _sLT("a", "b", "c", "d") ).
 
 (* Intrinsic calls using rocq_copn *)
+(* x = MOV_32 y *)
 Check cmd:(
   rocq_copn [:: Lvar (mklvar "x")] (mkopn "MOV_32") [:: (expr:("y") : pexpr)] ;
 ).
@@ -1266,6 +1270,34 @@ Check prog:(
     "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #2]; /* u64 */
     "v.229"[:u64 #2] = "v.229"[:u64 #2] <<r 64u (cast 8u) #32; /* u64 */
   }
+).
+
+Check prog:(
+(* fn "euclid" (reg ui64 "a.171", reg ui64 "b.172") -> (reg ui64) *)
+FN "euclid" WITH
+[:: (aword U64); (aword U64)]
+[:: mklvar "a.171"; mklvar "b.172"]
+[:: (aword U64)]
+[:: mklvar "b.172"]
+{
+  while ("a.171" !=64ui (64ui) #0) {
+    "r.173" = "b.172" %64ui "a.171"; /* u64 */
+    "b.172" = "a.171"; /* u64 */
+    "a.171" = "r.173"; /* u64 */
+  }
+}
+
+(* fn "gcd" (reg ui64 "x.169", reg ui64 "y.170") -> (reg ui64) *)
+FN "gcd" WITH
+[:: (aword U64); (aword U64)]
+[:: mklvar "x.169"; mklvar "y.170"]
+[:: (aword U64)]
+[:: mklvar "x.169"]
+{
+  "y.170" = "y.170"; /* u64 */
+  call [:: Lvar (mklvar "x.169")] (mkfunname "euclid") [:: (expr:("x.169") : pexpr);
+    (expr:("y.170") : pexpr)] ;
+}
 ).
 
 End ProgTests.
