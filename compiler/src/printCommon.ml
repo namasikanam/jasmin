@@ -42,12 +42,22 @@ let string_of_cmp_ty = function
   | Cmp_w (Unsigned, _) -> "u"
   | Cmp_int -> ""
 
+(* Coq-compatible: includes word size in comparison type *)
+let string_of_cmp_ty_coq = function
+  | Cmp_w (Signed, sz) -> asprintf "%ds" (int_of_ws sz)
+  | Cmp_w (Unsigned, sz) -> asprintf "%du" (int_of_ws sz)
+  | Cmp_int -> ""
+
 let string_of_w_cast sz =
   asprintf "%du" (int_of_ws sz)
 
 let string_of_op_kind = function
   | Op_w ws -> string_of_w_cast ws
   | Op_int -> ""
+
+let string_of_op_kind_coq = function
+  | Op_w ws -> string_of_w_cast ws
+  | Op_int -> "i"
 
 let string_of_div_kind sg = function
   | Op_w ws -> asprintf "%d%s" (int_of_ws ws) (string_of_signess sg)
@@ -138,6 +148,51 @@ let string_of_op2 = function
   | Ole k -> "<=" ^ string_of_cmp_ty k
   | Ogt k -> ">" ^ string_of_cmp_ty k
   | Oge k -> ">=" ^ string_of_cmp_ty k
+  | Ovadd (ve, ws) -> asprintf "+%s" (string_of_velem Unsigned ws ve)
+  | Ovsub (ve, ws) -> asprintf "-%s" (string_of_velem Unsigned ws ve)
+  | Ovmul (ve, ws) -> asprintf "*%s" (string_of_velem Unsigned ws ve)
+  | Ovlsr (ve, ws) -> asprintf ">>%s" (string_of_velem Unsigned ws ve)
+  | Ovasr (ve, ws) -> asprintf ">>%s" (string_of_velem Signed ws ve)
+  | Ovlsl (ve, ws) -> asprintf "<<%s" (string_of_velem Signed ws ve)
+  | Owi2(sg, ws, o) -> string_of_wiop2 sg ws o
+
+(* Coq-compatible: (cast Nu) for word_of_int, sizes in comparisons *)
+let string_of_op1_coq ~debug:_ = function
+  | Oint_of_word (s, _sz) ->
+      asprintf "(%s)" (string_of_int_cast s)
+  | Oword_of_int szo  -> asprintf "(cast %du)" (int_of_ws szo)
+  | Osignext (szo, _) -> asprintf "(%ds)" (int_of_ws szo)
+  | Ozeroext (szo, _) -> asprintf "(%du)" (int_of_ws szo)
+  | Olnot sz ->
+      asprintf "!%s" (string_of_w_cast sz)
+  | Onot -> "!"
+  | Oneg k -> "-" ^ string_of_op_kind_coq k
+  | Owi1(sg, o) -> string_of_wiop1 ~debug:false sg o
+
+let string_of_op2_coq = function
+  | Obeq -> "=="
+  | Oand -> "&&"
+  | Oor -> "||"
+  | Oadd k -> "+" ^ string_of_op_kind_coq k
+  | Omul k -> "*" ^ string_of_op_kind_coq k
+  | Osub k -> "-" ^ string_of_op_kind_coq k
+  | Odiv(s, k) -> "/" ^ string_of_div_kind s k
+  | Omod(s, k) -> "%" ^ string_of_div_kind s k
+  | Oland w -> "&"  ^ string_of_w_cast w
+  | Olor  w -> "|"  ^ string_of_w_cast w
+  | Olxor w -> "^"  ^ string_of_w_cast w
+  | Olsr  w -> ">>" ^ string_of_w_cast w
+  | Olsl k -> "<<" ^ string_of_op_kind_coq k
+  | Oasr Op_int -> ">>s"
+  | Oasr (Op_w w) -> asprintf ">>%ds" (int_of_ws w)
+  | Oror w -> ">>r " ^ string_of_w_cast w
+  | Orol w -> "<<r " ^ string_of_w_cast w
+  | Oeq k -> "==" ^ string_of_op_kind_coq k
+  | Oneq k -> "!=" ^ string_of_op_kind_coq k
+  | Olt k -> "<" ^ string_of_cmp_ty_coq k
+  | Ole k -> "<=" ^ string_of_cmp_ty_coq k
+  | Ogt k -> ">" ^ string_of_cmp_ty_coq k
+  | Oge k -> ">=" ^ string_of_cmp_ty_coq k
   | Ovadd (ve, ws) -> asprintf "+%s" (string_of_velem Unsigned ws ve)
   | Ovsub (ve, ws) -> asprintf "-%s" (string_of_velem Unsigned ws ve)
   | Ovmul (ve, ws) -> asprintf "*%s" (string_of_velem Unsigned ws ve)

@@ -68,6 +68,12 @@ val pp_prog  : debug:bool ->
                ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asmOp ->
                Format.formatter -> ('info, ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) prog -> unit
 
+val pp_prog_coq : debug:bool ->
+               Wsize.wsize ->
+               Wsize.wsize ->
+               ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op Sopn.asmOp ->
+               Format.formatter -> ('info, ('reg, 'regx, 'xreg, 'rflag, 'cond, 'asm_op, 'extra_op) Arch_extra.extended_op) prog -> unit
+
 val pp_to_save : debug:bool ->
                  Format.formatter -> Var0.Var.var * BinNums.coq_Z -> unit
 

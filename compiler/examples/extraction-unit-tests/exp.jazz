@@ -1,0 +1,17 @@
+export
+fn exp(reg ui64 x y) -> reg ui64 {
+  reg ui64 a;
+  reg ui64 b;
+  reg ui64 c;
+  a = x + y;
+  b = x - y;
+  c = a * b;
+  return c;
+}
+
+export
+fn exp2(reg u64 x y) -> reg u64 {
+  reg u64 z;
+  z = x + y;
+  return z;
+}

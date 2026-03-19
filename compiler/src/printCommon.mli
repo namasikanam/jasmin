@@ -6,6 +6,8 @@ val string_of_signess : Wsize.signedness -> string
 val string_of_velem : Wsize.signedness -> Wsize.wsize -> Wsize.velem -> string
 val string_of_op1 : debug:bool -> Operators.sop1 -> string
 val string_of_op2 : Operators.sop2 -> string
+val string_of_op1_coq : debug:bool -> Operators.sop1 -> string
+val string_of_op2_coq : Operators.sop2 -> string
 
 val pp_opn :
   Wsize.wsize ->
