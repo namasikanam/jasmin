@@ -94,6 +94,21 @@ let string_of_wiop1 ~debug sg = function
   | WIneg sz ->
       asprintf "-%s" (string_of_wi_cast sg sz)
 
+(* Coq-compatible: uses (cast ...) prefix for all cast-like operations *)
+let string_of_wiop1_coq sg = function
+  | WIwint_of_int sz ->
+      asprintf "(%s)" (string_of_wi_cast sg sz)
+  | WIint_of_wint _sz ->
+      asprintf "(cast %s)" (string_of_int_cast sg)
+  | WIword_of_wint sz ->
+      asprintf "(cast %s)" (string_of_w_cast sz)
+  | WIwint_of_word sz ->
+      asprintf "(cast %s)" (string_of_wi_cast sg sz)
+  | WIwint_ext(szo, _) ->
+      asprintf "(cast %s)" (string_of_wi_cast sg szo)
+  | WIneg sz ->
+      asprintf "-%s" (string_of_wi_cast sg sz)
+
 let string_of_op1 ~debug = function
   | Oint_of_word (s, sz) ->
       asprintf "(%s%s)" (string_of_int_cast s)
@@ -161,13 +176,13 @@ let string_of_op1_coq ~debug:_ = function
   | Oint_of_word (s, _sz) ->
       asprintf "(%s)" (string_of_int_cast s)
   | Oword_of_int szo  -> asprintf "(cast %du)" (int_of_ws szo)
-  | Osignext (szo, _) -> asprintf "(%ds)" (int_of_ws szo)
-  | Ozeroext (szo, _) -> asprintf "(%du)" (int_of_ws szo)
+  | Osignext (szo, _) -> asprintf "(cast %ds)" (int_of_ws szo)
+  | Ozeroext (szo, _) -> asprintf "(cast %du)" (int_of_ws szo)
   | Olnot sz ->
       asprintf "!%s" (string_of_w_cast sz)
   | Onot -> "!"
   | Oneg k -> "-" ^ string_of_op_kind_coq k
-  | Owi1(sg, o) -> string_of_wiop1 ~debug:false sg o
+  | Owi1(sg, o) -> string_of_wiop1_coq sg o
 
 let string_of_op2_coq = function
   | Obeq -> "=="

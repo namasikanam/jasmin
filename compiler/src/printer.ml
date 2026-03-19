@@ -261,8 +261,12 @@ let rec pp_gi ~debug pp_info pp_len pp_opn pp_var fmt i =
       | [] -> ()
       | x -> F.fprintf fmt "%a" (pp_glvs ~debug pp_len pp_var) x in
     let fn = if !coq_mode then F.asprintf "\"%s\"" f.fn_name else f.fn_name in
-    F.fprintf fmt "@[<hov 2>%a%s(%a);@]"
-      pp_x x fn (pp_ges ~debug pp_len pp_var) e
+    if !coq_mode then
+      F.fprintf fmt "@[<hov 2>%acall %s(%a); /* call */@]"
+        pp_x x fn (pp_ges ~debug pp_len pp_var) e
+    else
+      F.fprintf fmt "@[<hov 2>%a%s(%a);@]"
+        pp_x x fn (pp_ges ~debug pp_len pp_var) e
 
 (* -------------------------------------------------------------------- *)
 and pp_gc ~debug pp_info pp_len pp_opn pp_var fmt c =

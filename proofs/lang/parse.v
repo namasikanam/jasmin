@@ -66,7 +66,7 @@ Notation "x" := (mkvar x)
 (* Integer constants: #3 means Pconst 3. *)
 Notation "# z" :=
   (Pconst z)
-  (in custom expr at level 0, z constr,
+  (in custom expr at level 0, z constr at level 0,
    format "# z")
   : expr_scope.
 
@@ -448,8 +448,16 @@ Notation "e1 >= 64 'ui' e2" := (Papp2 (Owi2 Unsigned U64 WIge) e1 e2) (in custom
 (* Wint cast: (64ui) e → Owi1 Unsigned (WIwint_of_int U64) *)
 Notation "'(' 64 'ui' ')' e" := (Papp1 (Owi1 Unsigned (WIwint_of_int U64)) e) (in custom expr at level 2) : expr_scope.
 
-(* Additional cast sizes: (cast 8u), (cast 16u), (cast 32u), (cast 128u), (cast 256u) *)
-(* (cast 64u) is already defined above *)
+(* ========================================================================= *)
+(* Memory load: [:uN e]                                                      *)
+(* ========================================================================= *)
+
+Notation "'[:u8' e ']'" := (Pload Aligned U8 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u16' e ']'" := (Pload Aligned U16 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u32' e ']'" := (Pload Aligned U32 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u64' e ']'" := (Pload Aligned U64 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u128' e ']'" := (Pload Aligned U128 e) (in custom expr at level 0, e custom expr) : expr_scope.
+Notation "'[:u256' e ']'" := (Pload Aligned U256 e) (in custom expr at level 0, e custom expr) : expr_scope.
 
 End ExpressionNotations.
 
@@ -554,6 +562,35 @@ Notation "i c" :=
    c custom jcmd at level 2)
   : expr_scope.
 
+(* --- Function call: "x" = "f"("a", "b"); /* call */ --- *)
+(* MUST be defined BEFORE assignments so that assignments (defined later)    *)
+(* take priority in Coq's parser.                                           *)
+
+Notation "x = 'call' f () ; '/*' 'call' '*/'" :=
+  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [::]))
+  (in custom instr at level 10, x constr at level 0, f constr at level 0) : expr_scope.
+
+Notation "x = 'call' f ( a ) ; '/*' 'call' '*/'" :=
+  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr)]))
+  (in custom instr at level 10, x constr at level 0, f constr at level 0,
+   a custom expr) : expr_scope.
+
+Notation "x = 'call' f ( a , b ) ; '/*' 'call' '*/'" :=
+  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr); (b : pexpr)]))
+  (in custom instr at level 10, x constr at level 0, f constr at level 0,
+   a custom expr, b custom expr) : expr_scope.
+
+Notation "x = 'call' f ( a , b , c ) ; '/*' 'call' '*/'" :=
+  (mkI' (Ccall [:: Lvar (mklvar x)] (mkfunname f) [:: (a : pexpr); (b : pexpr); (c : pexpr)]))
+  (in custom instr at level 10, x constr at level 0, f constr at level 0,
+   a custom expr, b custom expr, c custom expr) : expr_scope.
+
+(* --- Memory store: [:u64 e1] = e2 ; /* u64 */ --- *)
+
+Notation "'[:u64' e1 ']' = e2 ; '/*' 'u64' '*/'" :=
+  (mkI' (Cassgn (Lmem Aligned U64 dummy_var_info e1) AT_none (aword U64) e2))
+  (in custom instr at level 10, e1 custom expr, e2 custom expr) : expr_scope.
+
 (* --- Assignment instructions: "x" = e ; /* uN */ --- *)
 
 Notation "x = e ; /* 'u8' */"    := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U8) e))    (in custom instr at level 10, x constr at level 0, e custom expr at level 13) : expr_scope.
@@ -567,7 +604,6 @@ Notation "x = e ; /* 'bool' */"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none aboo
 Notation "x = e ; /* 'int' */"   := (mkI' (Cassgn (Lvar (mklvar x)) AT_none aint e))   (in custom instr at level 10, x constr at level 0, e custom expr at level 13) : expr_scope.
 
 (* --- Return instruction: return ("r") ; --- *)
-(* Modeled as assignment of the variable to itself with u64 type. *)
 
 Notation "'return' ( r ) ; /* 'u8' */"   := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U8)   (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
 Notation "'return' ( r ) ; /* 'u16' */"  := (mkI' (Cassgn (Lvar (mklvar r)) AT_none (aword U16)  (Plvar (mklvar r)))) (in custom instr at level 10, r constr at level 0) : expr_scope.
@@ -592,6 +628,14 @@ Notation "'return' ( r1 , r2 ) ;" :=
   (in custom instr at level 10, r1 constr at level 0, r2 constr at level 0) : expr_scope.
 
 (* --- Control flow --- *)
+
+(* If without else *)
+Notation "'if' e { c }" :=
+  (mkI' (Cif e c [::]))
+  (in custom instr at level 10,
+   e custom expr at level 13,
+   c custom jcmd at level 2)
+  : expr_scope.
 
 Notation "'if' e { c1 } 'else' { c2 }" :=
   (mkI' (Cif e c1 c2))
@@ -1030,6 +1074,28 @@ Check prog:(
   }
 ).
 
-(* extraction-unit-tests/gcd.jazz: gcd function — skipped, needs function call notation *)
+(* extraction-unit-tests/gcd.jazz: gcd function (function call with /* call */) *)
+Check prog:(
+  fn "gcd" (reg ui64 "x.194" , reg ui64 "y.195") -> (reg ui64) {
+    "y.195" = "y.195" ; /* u64 */
+    "x.194" = call "euclid" ("x.194" , "y.195") ; /* call */
+    return ("x.194") ;
+  }
+).
+
+(* extraction-unit-tests/add_in_mem.jazz: memory load/store, empty return *)
+Check prog:(
+  fn "add_mem" (reg ui64 "out.194" , reg ui64 "in1.195" , reg ui64 "in2.196" , reg ui64 "len.197") -> () {
+    "i.198" = (64ui) #0 ; /* u64 */
+    while ("i.198" <64ui "len.197") {
+      "x.199" = [:u64 (cast 64u) ("in1.195" +64ui (64ui) #8 *64ui "i.198")] ; /* u64 */
+      "y.200" = [:u64 (cast 64u) ("in2.196" +64ui (64ui) #8 *64ui "i.198")] ; /* u64 */
+      "d.201" = "x.199" +64u "y.200" ; /* u64 */
+      [:u64 (cast 64u) ("out.194" +64ui (64ui) #8 *64ui "i.198")] = "d.201" ; /* u64 */
+      "i.198" = "i.198" +64ui (64ui) #1 ; /* u64 */
+    }
+    return () ;
+  }
+).
 
 End ProgTests.
