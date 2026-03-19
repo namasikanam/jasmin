@@ -63,6 +63,10 @@ let string_of_div_kind sg = function
   | Op_w ws -> asprintf "%d%s" (int_of_ws ws) (string_of_signess sg)
   | Op_int -> if sg = Signed then (string_of_signess sg) else ""
 
+let string_of_div_kind_coq sg = function
+  | Op_w ws -> asprintf "%d%s" (int_of_ws ws) (string_of_signess sg)
+  | Op_int -> if sg = Signed then "si" else "i"
+
 (* -------------------------------------------------------------------- *)
 
 let string_of_w_ty ws = asprintf "u%d" (int_of_ws ws)
@@ -191,8 +195,8 @@ let string_of_op2_coq = function
   | Oadd k -> "+" ^ string_of_op_kind_coq k
   | Omul k -> "*" ^ string_of_op_kind_coq k
   | Osub k -> "-" ^ string_of_op_kind_coq k
-  | Odiv(s, k) -> "/" ^ string_of_div_kind s k
-  | Omod(s, k) -> "%" ^ string_of_div_kind s k
+  | Odiv(s, k) -> "/" ^ string_of_div_kind_coq s k
+  | Omod(s, k) -> "%" ^ string_of_div_kind_coq s k
   | Oland w -> "&"  ^ string_of_w_cast w
   | Olor  w -> "|"  ^ string_of_w_cast w
   | Olxor w -> "^"  ^ string_of_w_cast w

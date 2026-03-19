@@ -36,10 +36,12 @@ let as_string es =
 
 (* -------------------------------------------------------------------- *)
 
+let string_of_ws_coq ws = Format.sprintf "U%i" (int_of_ws ws)
+
 let pp_ge_aux ~debug (pp_len: 'len pp) (pp_var: 'len gvar pp) : associativity -> priority -> 'len gexpr pp =
   let pp_var_i = pp_gvar_i pp_var in
   let pp_gvar fmt (x: 'len ggvar) =
-    let s = if is_gkvar x then "" else "/* global: */ " in
+    let s = if is_gkvar x || !coq_mode then "" else "/* global: */ " in
     Format.fprintf fmt "%s%a" s pp_var_i x.gv in
 
   let str_op1 = if !coq_mode then string_of_op1_coq else string_of_op1 in
@@ -55,7 +57,11 @@ let pp_ge_aux ~debug (pp_len: 'len pp) (pp_var: 'len gvar pp) : associativity ->
     pp_arr_access pp_gvar (pp_expr NoAssoc priority_min) fmt al aa ws x e
   | Psub(aa,ws,len,x,e) ->
     let ws = if !coq_mode then Some ws else non_default_wsize (L.unloc x.gv) ws in
-    pp_arr_slice pp_gvar (pp_expr NoAssoc priority_min) pp_len fmt aa ws x e len
+    if !coq_mode then
+      let pp_len_pos fmt n = F.fprintf fmt "%a%%positive" pp_len n in
+      pp_arr_slice pp_gvar (pp_expr NoAssoc priority_min) pp_len_pos fmt aa ws x e len
+    else
+      pp_arr_slice pp_gvar (pp_expr NoAssoc priority_min) pp_len fmt aa ws x e len
   | Pload(al,ws,e) ->
     pp_mem_access (pp_expr NoAssoc priority_min) fmt al (Some ws) e
   | Papp1(o, e) ->
@@ -64,8 +70,19 @@ let pp_ge_aux ~debug (pp_len: 'len pp) (pp_var: 'len gvar pp) : associativity ->
   | Papp2(op,e1,e2) ->
      let p = priority_of_op2 op in
      optparent fmt prio side p "%a %s %a" (pp_expr Left p) e1 (str_op2 op) (pp_expr Right p) e2
-  | PappN (Opack(_sz, pe), es) ->
-    F.fprintf fmt "@[(%du%n)[%a]@]" (List.length es) (int_of_pe pe) (pp_list ",@ " (pp_expr NoAssoc priority_min)) es
+  | PappN (Opack(sz, pe), es) ->
+    if !coq_mode then
+      let pp_coq_pe fmt = function
+        | W.PE1 -> F.fprintf fmt "PE1" | W.PE2 -> F.fprintf fmt "PE2"
+        | W.PE4 -> F.fprintf fmt "PE4" | W.PE8 -> F.fprintf fmt "PE8"
+        | W.PE16 -> F.fprintf fmt "PE16" | W.PE32 -> F.fprintf fmt "PE32"
+        | W.PE64 -> F.fprintf fmt "PE64" | W.PE128 -> F.fprintf fmt "PE128"
+      in
+      F.fprintf fmt "@[coq:((PappN (Opack %s %a) [:: %a]))@]"
+        (string_of_ws_coq sz) pp_coq_pe pe
+        (pp_list ";@ " (fun fmt e -> F.fprintf fmt "(expr:(%a) : pexpr)" (pp_expr NoAssoc priority_min) e)) es
+    else
+      F.fprintf fmt "@[(%du%n)[%a]@]" (List.length es) (int_of_pe pe) (pp_list ",@ " (pp_expr NoAssoc priority_min)) es
   | PappN (Ocombine_flags c, es) ->
     F.fprintf fmt "@[%s(%a)@]" (string_of_combine_flags c) (pp_list ",@ " (pp_expr NoAssoc priority_min)) es
   | PappN (Oarray len, es) ->
@@ -112,11 +129,15 @@ let pp_glv ~debug pp_len pp_var fmt =
   | Lmem (al, ws, _, e) ->
     pp_mem_access (pp_ge pp_len pp_var) fmt al (Some ws) e
   | Laset(al, aa, ws, x, e) ->
-    let ws = non_default_wsize (L.unloc x) ws in
+    let ws = if !coq_mode then Some ws else non_default_wsize (L.unloc x) ws in
     pp_arr_access (pp_gvar_i pp_var) (pp_ge pp_len pp_var) fmt al aa ws x e
   | Lasub(aa, ws, len, x, e) ->
-    let ws = non_default_wsize (L.unloc x) ws in
-    pp_arr_slice (pp_gvar_i pp_var) (pp_ge pp_len pp_var) pp_len fmt aa ws x e len
+    let ws = if !coq_mode then Some ws else non_default_wsize (L.unloc x) ws in
+    if !coq_mode then
+      let pp_len_pos fmt n = F.fprintf fmt "%a%%positive" pp_len n in
+      pp_arr_slice (pp_gvar_i pp_var) (pp_ge pp_len pp_var) pp_len_pos fmt aa ws x e len
+    else
+      pp_arr_slice (pp_gvar_i pp_var) (pp_ge pp_len pp_var) pp_len fmt aa ws x e len
 
 
 (* -------------------------------------------------------------------- *)
@@ -173,36 +194,87 @@ let pp_optional_comment fmt s =
   if s <> "" then
     Format.fprintf fmt " /* %s */" s
 
+(* Coq-mode helpers for printing lvals and pexprs as raw Coq terms *)
+let pp_coq_lval_ty pp_len fmt ty =
+  match ty with
+  | Bty Bool -> F.fprintf fmt "abool"
+  | Bty Int -> F.fprintf fmt "aint"
+  | Bty (U ws) -> F.fprintf fmt "(aword %s)" (string_of_ws_coq ws)
+  | Arr (ws, n) -> F.fprintf fmt "(aarr %s %a%%positive)" (string_of_ws_coq ws) pp_len n
+
+let pp_coq_lval ~debug pp_len pp_var fmt = function
+  | Lnone (_, ty) -> F.fprintf fmt "Lnone dummy_var_info %a" (pp_coq_lval_ty pp_len) ty
+  | Lvar x -> F.fprintf fmt "Lvar (mklvar %a)" pp_var (L.unloc x)
+  | Laset(al, _aa, ws, x, e) ->
+    let al_s = match al with Memory_model.Aligned -> "Aligned" | Memory_model.Unaligned -> "Unaligned" in
+    F.fprintf fmt "Laset %s AAscale %s (mklvar %a) (expr:(%a) : pexpr)"
+      al_s (string_of_ws_coq ws) pp_var (L.unloc x) (pp_ge ~debug pp_len pp_var) e
+  | Lmem(al, ws, _, e) ->
+    let al_s = match al with Memory_model.Aligned -> "Aligned" | Memory_model.Unaligned -> "Unaligned" in
+    F.fprintf fmt "Lmem %s %s dummy_var_info (expr:(%a) : pexpr)"
+      al_s (string_of_ws_coq ws) (pp_ge ~debug pp_len pp_var) e
+  | Lasub(_aa, ws, len, x, e) ->
+    F.fprintf fmt "Lasub AAscale %s %a%%positive (mklvar %a) (expr:(%a) : pexpr)"
+      (string_of_ws_coq ws) pp_len len pp_var (L.unloc x) (pp_ge ~debug pp_len pp_var) e
+
+let pp_coq_expr ~debug pp_len pp_var fmt e =
+  F.fprintf fmt "(expr:(%a) : pexpr)" (pp_ge ~debug pp_len pp_var) e
+
 let rec pp_gi ~debug pp_info pp_len pp_opn pp_var fmt i =
   F.fprintf fmt "%a" pp_info (i.i_loc, i.i_info);
   if not !coq_mode then F.fprintf fmt "%a" pp_annotations i.i_annot;
   match i.i_desc with
   | Cassgn(x, tg, ty, Parr_init (ws, n)) ->
-    let tag = if !coq_mode then "" else pp_tag tg in
-    F.fprintf fmt "@[<hov 2>ArrayInit(%a); /* length=%s*%a %a%s */@]"
-      (pp_glv ~debug pp_len pp_var) x
-      (string_of_ws ws) pp_len n
-      (pp_gtype pp_len) ty
-      tag
+    if !coq_mode then
+      F.fprintf fmt "@[<hov 2>ArrayInit(%a); /* arr_init */@]"
+        (pp_glv ~debug pp_len pp_var) x
+    else begin
+      let tag = pp_tag tg in
+      F.fprintf fmt "@[<hov 2>ArrayInit(%a); /* length=%s*%a %a%s */@]"
+        (pp_glv ~debug pp_len pp_var) x
+        (string_of_ws ws) pp_len n
+        (pp_gtype pp_len) ty
+        tag
+    end
 
   | Cassgn(x , tg, ty, e) ->
     let tag = if !coq_mode then "" else pp_tag tg in
-    F.fprintf fmt "@[<hov 2>%a =@ %a; /* %a%s */@]"
-      (pp_glv ~debug pp_len pp_var) x
-      (pp_ge ~debug pp_len pp_var) e
-      (pp_gtype pp_len) ty
-      tag
+    if !coq_mode then
+      let pp_gtype_coq fmt = function
+        | Bty Bool -> F.fprintf fmt "bool"
+        | Bty Int -> F.fprintf fmt "int"
+        | Bty (U ws) -> F.fprintf fmt "u%d" (int_of_ws ws)
+        | Arr (ws, n) -> F.fprintf fmt "u%d[%a%%positive]" (int_of_ws ws) pp_len n
+      in
+      F.fprintf fmt "@[<hov 2>%a =@ %a; /* %a */@]"
+        (pp_glv ~debug pp_len pp_var) x
+        (pp_ge ~debug pp_len pp_var) e
+        pp_gtype_coq ty
+    else
+      F.fprintf fmt "@[<hov 2>%a =@ %a; /* %a%s */@]"
+        (pp_glv ~debug pp_len pp_var) x
+        (pp_ge ~debug pp_len pp_var) e
+        (pp_gtype pp_len) ty
+        tag
 
   | Copn(x, t, o, e) ->
     let pp_cast fmt = function
       | Sopn.Oasm (Arch_extra.BaseOp(Some ws, _)) -> Format.fprintf fmt "(%du)" (int_of_ws ws)
       | _ -> () in
 
-    let tag = if !coq_mode then "" else pp_tag t in
-    F.fprintf fmt "@[<hov 2>%a%a#%a(%a);%a@]"
-      (pp_glvs ~debug pp_len pp_var) x pp_cast o pp_opn o
-      (pp_ges ~debug pp_len pp_var) e
-      pp_optional_comment tag
+    if !coq_mode then begin
+      let opname = F.asprintf "%a%a" pp_cast o pp_opn o in
+      F.fprintf fmt "@[<hov 2>coq_copn [:: %a] (mkopn \"%s\") [:: %a] ;@]"
+        (pp_list ";@ " (pp_coq_lval ~debug pp_len pp_var)) x
+        opname
+        (pp_list ";@ " (pp_coq_expr ~debug pp_len pp_var)) e
+    end else begin
+      let tag = pp_tag t in
+      F.fprintf fmt "@[<hov 2>%a%a#%a(%a);%a@]"
+        (pp_glvs ~debug pp_len pp_var) x pp_cast o pp_opn o
+        (pp_ges ~debug pp_len pp_var) e
+        pp_optional_comment tag
+    end
 
   | Csyscall(x, o, e) ->
       F.fprintf fmt "@[<hov 2>%a%s(%a);@]"
@@ -257,16 +329,18 @@ let rec pp_gi ~debug pp_info pp_len pp_opn pp_var fmt i =
       (pp_cblock ~debug pp_info pp_len pp_opn pp_var) c'
 
   | Ccall(x, f, e) ->
-    let pp_x fmt = function
-      | [] -> ()
-      | x -> F.fprintf fmt "%a" (pp_glvs ~debug pp_len pp_var) x in
-    let fn = if !coq_mode then F.asprintf "\"%s\"" f.fn_name else f.fn_name in
     if !coq_mode then
-      F.fprintf fmt "@[<hov 2>%acall %s(%a); /* call */@]"
-        pp_x x fn (pp_ges ~debug pp_len pp_var) e
-    else
+      F.fprintf fmt "@[<hov 2>coq_ccall [:: %a] (mkfunname \"%s\") [:: %a] ;@]"
+        (pp_list ";@ " (pp_coq_lval ~debug pp_len pp_var)) x
+        f.fn_name
+        (pp_list ";@ " (pp_coq_expr ~debug pp_len pp_var)) e
+    else begin
+      let pp_x fmt = function
+        | [] -> ()
+        | x -> F.fprintf fmt "%a" (pp_glvs ~debug pp_len pp_var) x in
       F.fprintf fmt "@[<hov 2>%a%s(%a);@]"
-        pp_x x fn (pp_ges ~debug pp_len pp_var) e
+        pp_x x f.fn_name (pp_ges ~debug pp_len pp_var) e
+    end
 
 (* -------------------------------------------------------------------- *)
 and pp_gc ~debug pp_info pp_len pp_opn pp_var fmt c =
@@ -507,31 +581,49 @@ let pp_prog ~debug pd msfsize asmOp fmt ((gd, funcs):('info, 'asm) Prog.prog) =
      (pp_list "@ @ " (pp_fun_ ~debug pp_opn pp_var)) (List.rev funcs)
 
 (* Coq-compatible printer: sets coq_mode, quotes names, uses (cast Nu), sized comparisons *)
-let pp_header_coq_ pp_var fmt fd =
-  let pp_vd =  pp_var_decl pp_var pp_len in
-  let ret = List.map L.unloc fd.f_ret in
-  F.fprintf fmt "fn \"%s\" @[(%a)@] -> @[(%a)@]"
-    fd.f_name.fn_name
-    (pp_list ",@ " pp_vd) fd.f_args
-    (pp_list ",@ " (pp_ty_decl pp_len)) ret
+(* Coq-compatible function printer using generic format:
+   FN "name" WITH [tyin] [params] { body } [tyout] [results]
+   This avoids combinatorial explosion of notation variants for different
+   parameter/return type combinations. *)
+(* Print the Coq atype constructor for a variable's type *)
+let pp_coq_atype fmt v =
+  match v.v_ty with
+  | Bty Bool -> F.fprintf fmt "abool"
+  | Bty Int -> F.fprintf fmt "aint"
+  | Bty (U ws) -> F.fprintf fmt "(aword %s)" (string_of_ws_coq ws)
+  | Arr (ws, n) -> F.fprintf fmt "(aarr %s %d%%positive)" (string_of_ws_coq ws) n
 
 let pp_fun_coq_ ~debug ?pp_locals:_ ?(pp_info=pp_noinfo) pp_opn pp_var fmt fd =
   let ret = List.map L.unloc fd.f_ret in
   let pp_ret fmt () =
     F.fprintf fmt "return @[(%a)@];"
       (pp_list ",@ " pp_var) ret in
-  F.fprintf fmt "@[<v>%a {@   @[<v>%a@ %a@]@ }@]"
-   (pp_header_coq_ pp_var) fd
-   (pp_gc ~debug pp_info pp_len pp_opn pp_var) fd.f_body
-   pp_ret ()
+  (* Print human-readable header as a comment *)
+  let pp_vd =  pp_var_decl pp_var pp_len in
+  F.fprintf fmt "@[(* fn \"%s\" (%a) -> (%a) *)@]@ "
+    fd.f_name.fn_name
+    (pp_list ", " pp_vd) fd.f_args
+    (pp_list ", " (pp_ty_decl pp_len)) ret;
+  (* Print generic Coq-parseable header *)
+  let pp_mklvar fmt v = F.fprintf fmt "mklvar %a" pp_var v in
+  let args_vars = List.map (fun v -> v) fd.f_args in
+  let ret_vars = ret in
+  F.fprintf fmt "@[<v>FN \"%s\" WITH@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ @[[:: %a]@]@ {@   @[<v>%a@ %a@]@ }@]"
+    fd.f_name.fn_name
+    (pp_list ";@ " pp_coq_atype) args_vars
+    (pp_list ";@ " pp_mklvar) args_vars
+    (pp_list ";@ " pp_coq_atype) ret_vars
+    (pp_list ";@ " pp_mklvar) ret_vars
+    (pp_gc ~debug pp_info pp_len pp_opn pp_var) fd.f_body
+    pp_ret ()
 
 let pp_prog_coq ~debug pd msfsize asmOp fmt (p:('info, 'asm) Prog.prog) =
   coq_mode := true;
   let pp_opn = pp_opn pd msfsize asmOp in
   let pp_var = pp_var_coq ~debug in
-  let gd, funcs = p in
-  Format.fprintf fmt "@[<v>%a@ %a@]"
-     (pp_globs pp_var) gd
+  let _gd, funcs = p in
+  (* Skip globals in coq mode; they go into p_globs which mkprog sets to [::] *)
+  Format.fprintf fmt "@[<v>%a@]"
      (pp_list "@ @ " (pp_fun_coq_ ~debug pp_opn pp_var)) (List.rev funcs);
   coq_mode := false
 
