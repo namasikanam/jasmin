@@ -78,7 +78,7 @@ let pp_ge_aux ~debug (pp_len: 'len pp) (pp_var: 'len gvar pp) : associativity ->
         | W.PE16 -> F.fprintf fmt "PE16" | W.PE32 -> F.fprintf fmt "PE32"
         | W.PE64 -> F.fprintf fmt "PE64" | W.PE128 -> F.fprintf fmt "PE128"
       in
-      F.fprintf fmt "@[coq:((PappN (Opack %s %a) [:: %a]))@]"
+      F.fprintf fmt "@[rocq:((PappN (Opack %s %a) [:: %a]))@]"
         (string_of_ws_coq sz) pp_coq_pe pe
         (pp_list ";@ " (fun fmt e -> F.fprintf fmt "(expr:(%a) : pexpr)" (pp_expr NoAssoc priority_min) e)) es
     else

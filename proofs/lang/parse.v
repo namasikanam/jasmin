@@ -1,8 +1,17 @@
+(* Notations to parse Jasmin programs.
+
+   We assume the programs are well typed and elaborated.
+   This means that every operator has type annotations, that assignments have
+   type annotations, etc.
+   Variables are strings.
+   Integer constants are prefixed with #, e.g. #3.
+*)
+
 From mathcomp Require Import ssreflect ssrfun.
 
 Require Import expr.
 
-Axiom (mkvar : string -> gvar).
+Axiom (mkvar : string -> var).
 Axiom (mkvar_inj : injective mkvar).
 Axiom (mkfunname : string -> funname).
 Axiom (mkfunname_inj : injective mkfunname).
@@ -36,6 +45,9 @@ Module ExpressionNotations.
 
 Declare Scope expr_scope.
 Open Scope expr_scope.
+Open Scope string_scope.
+
+Notation mkgvar := (fun x => mk_gvar (mk_var_i (mkvar x))) (only parsing).
 
 (* --- Entry and exit --- *)
 
@@ -45,7 +57,7 @@ Notation "expr:( e )" :=
    format "'expr:(' e ')'")
   : expr_scope.
 
-Notation "coq:( e )" :=
+Notation "rocq:( e )" :=
   (e)
   (in custom expr at level 0,
    e constr at level 0)
@@ -58,8 +70,8 @@ Notation "( e )" :=
 
 (* --- Atoms --- *)
 
-(* Variables are string literals, mapped through mkvar. *)
-Notation "x" := (mkvar x)
+(* Variables are string literals, mapped through mkgvar. *)
+Notation "x" := (mkgvar x)
   (in custom expr at level 0, x constr at level 0)
   : expr_scope.
 
@@ -99,12 +111,12 @@ Notation "- 128 'u' e" := (Papp1 (Oneg (Op_w U128)) e) (in custom expr at level 
 Notation "- 256 'u' e" := (Papp1 (Oneg (Op_w U256)) e) (in custom expr at level 2) : expr_scope.
 
 (* Bitwise NOT: ~Nu e *)
-Notation "~ 8 'u' e"   := (Papp1 (Olnot U8) e)   (in custom expr at level 2) : expr_scope.
-Notation "~ 16 'u' e"  := (Papp1 (Olnot U16) e)  (in custom expr at level 2) : expr_scope.
-Notation "~ 32 'u' e"  := (Papp1 (Olnot U32) e)  (in custom expr at level 2) : expr_scope.
-Notation "~ 64 'u' e"  := (Papp1 (Olnot U64) e)  (in custom expr at level 2) : expr_scope.
-Notation "~ 128 'u' e" := (Papp1 (Olnot U128) e) (in custom expr at level 2) : expr_scope.
-Notation "~ 256 'u' e" := (Papp1 (Olnot U256) e) (in custom expr at level 2) : expr_scope.
+Notation "! 8 'u' e"   := (Papp1 (Olnot U8) e)   (in custom expr at level 2) : expr_scope.
+Notation "! 16 'u' e"  := (Papp1 (Olnot U16) e)  (in custom expr at level 2) : expr_scope.
+Notation "! 32 'u' e"  := (Papp1 (Olnot U32) e)  (in custom expr at level 2) : expr_scope.
+Notation "! 64 'u' e"  := (Papp1 (Olnot U64) e)  (in custom expr at level 2) : expr_scope.
+Notation "! 128 'u' e" := (Papp1 (Olnot U128) e) (in custom expr at level 2) : expr_scope.
+Notation "! 256 'u' e" := (Papp1 (Olnot U256) e) (in custom expr at level 2) : expr_scope.
 
 (* Word-of-int cast: (cast Nu) e *)
 (* Cannot use Jasmin's (Nu) syntax because it conflicts with ( e ) grouping. *)
@@ -470,24 +482,24 @@ Notation "'[:u256' e ']'" := (Pload Aligned U256 e) (in custom expr at level 0, 
 (* Maps to Pget Aligned AAscale UN (mkvar x) e                               *)
 (* ========================================================================= *)
 
-Notation "x '[:u8' e ']'"   := (Pget Aligned AAscale U8 (mkvar x) e)   (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
-Notation "x '[:u16' e ']'"  := (Pget Aligned AAscale U16 (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
-Notation "x '[:u32' e ']'"  := (Pget Aligned AAscale U32 (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
-Notation "x '[:u64' e ']'"  := (Pget Aligned AAscale U64 (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
-Notation "x '[:u128' e ']'" := (Pget Aligned AAscale U128 (mkvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
-Notation "x '[:u256' e ']'" := (Pget Aligned AAscale U256 (mkvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u8' e ']'"   := (Pget Aligned AAscale U8 (mkgvar x) e)   (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u16' e ']'"  := (Pget Aligned AAscale U16 (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u32' e ']'"  := (Pget Aligned AAscale U32 (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u64' e ']'"  := (Pget Aligned AAscale U64 (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u128' e ']'" := (Pget Aligned AAscale U128 (mkgvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
+Notation "x '[:u256' e ']'" := (Pget Aligned AAscale U256 (mkgvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr) : expr_scope.
 
 (* ========================================================================= *)
 (* Array slice: x[:uN e : len]                                                *)
 (* Maps to Psub AAscale UN len (mkvar x) e                                    *)
 (* ========================================================================= *)
 
-Notation "x '[:u8' e ':' n ']'"   := (Psub AAscale U8 n (mkvar x) e)   (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
-Notation "x '[:u16' e ':' n ']'"  := (Psub AAscale U16 n (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
-Notation "x '[:u32' e ':' n ']'"  := (Psub AAscale U32 n (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
-Notation "x '[:u64' e ':' n ']'"  := (Psub AAscale U64 n (mkvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
-Notation "x '[:u128' e ':' n ']'" := (Psub AAscale U128 n (mkvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
-Notation "x '[:u256' e ':' n ']'" := (Psub AAscale U256 n (mkvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u8' e ':' n ']'"   := (Psub AAscale U8 n (mkgvar x) e)   (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u16' e ':' n ']'"  := (Psub AAscale U16 n (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u32' e ':' n ']'"  := (Psub AAscale U32 n (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u64' e ':' n ']'"  := (Psub AAscale U64 n (mkgvar x) e)  (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u128' e ':' n ']'" := (Psub AAscale U128 n (mkgvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
+Notation "x '[:u256' e ':' n ']'" := (Psub AAscale U256 n (mkgvar x) e) (in custom expr at level 0, x constr at level 0, e custom expr, n constr at level 0) : expr_scope.
 
 (* ========================================================================= *)
 (* Untyped ternary conditional (level 13).                                   *)
@@ -593,7 +605,7 @@ End ExpressionNotations.
 
 Require Import sopn.
 
-Axiom (mklvar : string -> var_i).
+Definition mklvar (s : string) : var_i := mk_var_i (mkvar s).
 
 (* Parametric axiom for intrinsic names. *)
 Axiom mkopn : forall {asm_op : Type} {asmop : asmOp asm_op}, string -> @sopn asm_op asmop.
@@ -1168,94 +1180,6 @@ Notation "f p" :=
 End InstructionNotations.
 
 (* ========================================================================= *)
-(* Also keep the old constr-level notations for backwards compatibility.     *)
-(* ========================================================================= *)
-
-Module ConstrNotations.
-
-Import ExpressionNotations.
-Open Scope expr_scope.
-
-(* --- Assignment instructions: ASSIGN "x" <<-Nu e --- *)
-
-Notation "'ASSIGN' x '<<-' 8 'u' e"   := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U8) e))   (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 16 'u' e"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U16) e))  (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 32 'u' e"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U32) e))  (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 64 'u' e"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U64) e))  (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 128 'u' e" := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U128) e)) (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 256 'u' e" := (mkI' (Cassgn (Lvar (mklvar x)) AT_none (aword U256) e)) (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-
-Notation "'ASSIGN' x '<<-' 'bool' e" := (mkI' (Cassgn (Lvar (mklvar x)) AT_none abool e)) (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-Notation "'ASSIGN' x '<<-' 'int' e"  := (mkI' (Cassgn (Lvar (mklvar x)) AT_none aint e))  (at level 200, x at level 0, e custom expr at level 13) : expr_scope.
-
-(* --- Control flow --- *)
-
-Notation "'IF' e 'THEN' c1 'ELSE' c2" :=
-  (mkI' (Cif e c1 c2))
-  (at level 200, e custom expr at level 13,
-   c1 at level 200, c2 at level 200) : expr_scope.
-
-Notation "'WHILE' e 'DO' c" :=
-  (mkI' (Cwhile NoAlign [::] e dummy_instr_info c))
-  (at level 200, e custom expr at level 13, c at level 200) : expr_scope.
-
-Notation "'FOR' v 'FROM' e1 'TO' e2 'DO' c" :=
-  (mkI' (Cfor (mklvar v) (UpTo, e1, e2) c))
-  (at level 200, v at level 0,
-   e1 custom expr at level 13, e2 custom expr at level 13,
-   c at level 200) : expr_scope.
-
-Notation "'FOR' v 'FROM' e1 'DOWNTO' e2 'DO' c" :=
-  (mkI' (Cfor (mklvar v) (DownTo, e2, e1) c))
-  (at level 200, v at level 0,
-   e1 custom expr at level 13, e2 custom expr at level 13,
-   c at level 200) : expr_scope.
-
-(* --- Function call --- *)
-Notation "'CALL' f args 'RETURNING' lvs" :=
-  (mkI' (Ccall (map (fun x => Lvar (mklvar x)) lvs) (mkfunname f) args))
-  (at level 200, f at level 0, args at level 0, lvs at level 0) : expr_scope.
-
-(* --- Function notation: common arities --- *)
-
-Notation "'FN' name '(' ')' '{' body '}'" :=
-  (mkfunname name, mkfundef [::] [::] body [::] [::])
-  (at level 200, name at level 0, body at level 200) : expr_scope.
-
-Notation "'FN' name '(' p ':' 'u64' ')' '->' 'u64' '{' body '}' 'RETURNING' r" :=
-  (mkfunname name, mkfundef
-    [:: aword U64] [:: mklvar p]
-    body
-    [:: aword U64] [:: mklvar r])
-  (at level 200, name at level 0, p at level 0, r at level 0,
-   body at level 200) : expr_scope.
-
-Notation "'FN' name '(' p1 ':' 'u64' ',' p2 ':' 'u64' ')' '->' 'u64' '{' body '}' 'RETURNING' r" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64] [:: mklvar p1; mklvar p2]
-    body
-    [:: aword U64] [:: mklvar r])
-  (at level 200, name at level 0, p1 at level 0, p2 at level 0,
-   r at level 0, body at level 200) : expr_scope.
-
-Notation "'FN' name '(' p1 ':' 'u64' ',' p2 ':' 'u64' ',' p3 ':' 'u64' ')' '->' 'u64' '{' body '}' 'RETURNING' r" :=
-  (mkfunname name, mkfundef
-    [:: aword U64; aword U64; aword U64]
-    [:: mklvar p1; mklvar p2; mklvar p3]
-    body
-    [:: aword U64] [:: mklvar r])
-  (at level 200, name at level 0, p1 at level 0, p2 at level 0,
-   p3 at level 0, r at level 0, body at level 200) : expr_scope.
-
-(* Generic: explicit type/param/result lists *)
-Notation "'FN' name 'WITH' tyin params body tyout res" :=
-  (mkfunname name, mkfundef tyin params body tyout res)
-  (at level 200, name at level 0, tyin at level 0, params at level 0,
-   body at level 0, tyout at level 0, res at level 0) : expr_scope.
-
-End ConstrNotations.
-
-(* ========================================================================= *)
 (* Tests                                                                     *)
 (* ========================================================================= *)
 
@@ -1284,54 +1208,11 @@ Check expr:( "x" /64u "y" ).
 Check expr:( "x" /64s "y" ).
 Check expr:( "x" %64u "y" ).
 Check expr:( "x" >>64s "y" ).
-Check expr:( ~64u "x" ).
+Check expr:( !64u "x" ).
 Check expr:( -64u "x" ).
 End ExprTests.
 
-(* ---- Constr-level instruction and program tests ---- *)
-Section ConstrTests.
-Context {asm_op : Type} {asmop : asmOp asm_op}.
-Import ConstrNotations.
-Open Scope expr_scope.
-
-(* Single assignment *)
-Check (ASSIGN "r" <<- 64u "x" +64u "y").
-
-(* Instruction sequence using [:: ; ] *)
-Check [:: ASSIGN "r" <<- 64u "x" +64u "y"
-       ;  ASSIGN "r" <<- 64u "r" -64u #1 ].
-
-(* If/else *)
-Check (IF "x" ==64u "y"
-       THEN [:: ASSIGN "r" <<- 64u "x" ]
-       ELSE [:: ASSIGN "r" <<- 64u "y" ]).
-
-(* While loop *)
-Check (WHILE "x" <64u "y"
-       DO [:: ASSIGN "x" <<- 64u "x" +64u #1 ]).
-
-(* For loop *)
-Check (FOR "i" FROM #0 TO #10
-       DO [:: ASSIGN "x" <<- 64u "x" +64u #1 ]).
-
-(* Function: fn add(x : u64, y : u64) -> u64 *)
-Check (FN "add" ("x" : u64, "y" : u64) -> u64 {
-         [:: ASSIGN "r" <<- 64u "x" +64u "y" ]
-       } RETURNING "r").
-
-(* Program with two functions *)
-Check (mkprog [::
-  FN "add" ("x" : u64, "y" : u64) -> u64 {
-    [:: ASSIGN "r" <<- 64u "x" +64u "y" ]
-  } RETURNING "r"
-; FN "sub" ("x" : u64, "y" : u64) -> u64 {
-    [:: ASSIGN "r" <<- 64u "x" -64u "y" ]
-  } RETURNING "r"
-]).
-
-End ConstrTests.
-
-(* ---- Custom-entry instruction and program tests ---- *)
+(* ---- instruction and program tests ---- *)
 Section ProgTests.
 Context {asm_op : Type} {asmop : asmOp asm_op}.
 Import InstructionNotations.
@@ -1774,28 +1655,29 @@ Check prog:(
 ).
 
 Check prog:(
-(* fn "sipround" (reg u64[4] "v.229") -> (reg u64[4]) *)
-FN "sipround" WITH
-[:: (aarr U64 4%positive)]
-[:: mklvar "v.229"]
-[:: (aarr U64 4%positive)]
-[:: mklvar "v.229"]
-{
-  "v.229"[:u64 #0] = "v.229"[:u64 #0] +64u "v.229"[:u64 #1]; /* u64 */
-  "v.229"[:u64 #1] = "v.229"[:u64 #1] <<r 64u (cast 8u) #13; /* u64 */
-  "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #0]; /* u64 */
-  "v.229"[:u64 #0] = "v.229"[:u64 #0] <<r 64u (cast 8u) #32; /* u64 */
-  "v.229"[:u64 #2] = "v.229"[:u64 #2] +64u "v.229"[:u64 #3]; /* u64 */
-  "v.229"[:u64 #3] = "v.229"[:u64 #3] <<r 64u (cast 8u) #16; /* u64 */
-  "v.229"[:u64 #3] = "v.229"[:u64 #3] ^64u "v.229"[:u64 #2]; /* u64 */
-  "v.229"[:u64 #0] = "v.229"[:u64 #0] +64u "v.229"[:u64 #3]; /* u64 */
-  "v.229"[:u64 #3] = "v.229"[:u64 #3] <<r 64u (cast 8u) #21; /* u64 */
-  "v.229"[:u64 #3] = "v.229"[:u64 #3] ^64u "v.229"[:u64 #0]; /* u64 */
-  "v.229"[:u64 #2] = "v.229"[:u64 #2] +64u "v.229"[:u64 #1]; /* u64 */
-  "v.229"[:u64 #1] = "v.229"[:u64 #1] <<r 64u (cast 8u) #17; /* u64 */
-  "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #2]; /* u64 */
-  "v.229"[:u64 #2] = "v.229"[:u64 #2] <<r 64u (cast 8u) #32; /* u64 */
-  return ("v.229");
-}
+  (* fn "sipround" (reg u64[4] "v.229") -> (reg u64[4]) *)
+  FN "sipround" WITH
+  [:: (aarr U64 4%positive)]
+  [:: mklvar "v.229"]
+  [:: (aarr U64 4%positive)]
+  [:: mklvar "v.229"]
+  {
+    "v.229"[:u64 #0] = "v.229"[:u64 #0] +64u "v.229"[:u64 #1]; /* u64 */
+    "v.229"[:u64 #1] = "v.229"[:u64 #1] <<r 64u (cast 8u) #13; /* u64 */
+    "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #0]; /* u64 */
+    "v.229"[:u64 #0] = "v.229"[:u64 #0] <<r 64u (cast 8u) #32; /* u64 */
+    "v.229"[:u64 #2] = "v.229"[:u64 #2] +64u "v.229"[:u64 #3]; /* u64 */
+    "v.229"[:u64 #3] = "v.229"[:u64 #3] <<r 64u (cast 8u) #16; /* u64 */
+    "v.229"[:u64 #3] = "v.229"[:u64 #3] ^64u "v.229"[:u64 #2]; /* u64 */
+    "v.229"[:u64 #0] = "v.229"[:u64 #0] +64u "v.229"[:u64 #3]; /* u64 */
+    "v.229"[:u64 #3] = "v.229"[:u64 #3] <<r 64u (cast 8u) #21; /* u64 */
+    "v.229"[:u64 #3] = "v.229"[:u64 #3] ^64u "v.229"[:u64 #0]; /* u64 */
+    "v.229"[:u64 #2] = "v.229"[:u64 #2] +64u "v.229"[:u64 #1]; /* u64 */
+    "v.229"[:u64 #1] = "v.229"[:u64 #1] <<r 64u (cast 8u) #17; /* u64 */
+    "v.229"[:u64 #1] = "v.229"[:u64 #1] ^64u "v.229"[:u64 #2]; /* u64 */
+    "v.229"[:u64 #2] = "v.229"[:u64 #2] <<r 64u (cast 8u) #32; /* u64 */
+    return ("v.229");
+  }
+).
 
 End ProgTests.
