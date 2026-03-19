@@ -7,7 +7,7 @@ let dwarf = ref false
 let debug = ref false
 let timings = ref false
 let print_list = ref []
-let print_coq = ref false
+let print_rocq = ref false
 let print_liveness = ref false
 let slice = ref []
 let check_safety = ref false
@@ -232,7 +232,7 @@ let options = [
     "-print-export-info-json", Arg.Set print_export_info_json, " Print information about exported functions in json";
     "-lazy-regalloc", Arg.Set lazy_regalloc, " Allocate variables to registers in program order";
     "-pall"    , Arg.Unit set_all_print, " Print program after each compilation steps";
-    "-coq"     , Arg.Set print_coq, " Use Coq-compatible output (quoted names, sized comparisons, cast syntax)";
+    "-rocq"     , Arg.Set print_rocq, " Use Rocq-compatible output (quoted names, sized comparisons, cast syntax)";
     "-print-dependencies", Arg.Set print_dependencies, " Print dependencies and exit";
     "-intel", Arg.Unit (set_syntax `Intel), " Use intel syntax (default is AT&T)"; 
     "-ATT", Arg.Unit (set_syntax `ATT), " Use AT&T syntax (default is AT&T)"; 

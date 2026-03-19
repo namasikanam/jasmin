@@ -197,8 +197,8 @@ let main () =
         |> fun () -> exit 0
       else
         (* This should be in a different entry point jasmin2rocq like for EC *)
-        let pp = if !Glob_options.print_coq
-                 then Printer.pp_prog_coq ~debug Arch.pointer_data Arch.msf_size Arch.asmOp
+        let pp = if !Glob_options.print_rocq
+                 then Printer.pp_prog_rocq ~debug Arch.pointer_data Arch.msf_size Arch.asmOp
                  else Printer.pp_prog ~debug Arch.pointer_data Arch.msf_size Arch.asmOp in
         eprint s pp p
     in
@@ -211,10 +211,10 @@ let main () =
       | Some strategy -> AutoSpill.doit strategy prog
     in
 
-    (* Now call the coq compiler *)
+    (* Now call the rocq compiler *)
     let cprog = Conv.cuprog_of_prog prog in
 
-    if !debug then Printf.eprintf "translated to coq \n%!";
+    if !debug then Printf.eprintf "translated to rocq \n%!";
 
     let to_exec = Pretyping.Env.Exec.get env in
     if to_exec <> [] then begin

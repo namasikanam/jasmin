@@ -572,7 +572,7 @@ Notation "x '[:u256' e ':' n ']'" := (Psub AAscale U256 n (mkgvar x) e) (in cust
 
 (* ========================================================================= *)
 (* Untyped ternary conditional (level 13).                                   *)
-(* The compiler's coq mode prints: e1 ? e2 : e3 without type annotation.    *)
+(* The compiler's rocq mode prints: e1 ? e2 : e3 without type annotation.    *)
 (* We default to aint; the type can be refined from the assignment context.  *)
 (* ========================================================================= *)
 
@@ -657,7 +657,7 @@ Notation "'(4u2)' '[' e1 , e2 , e3 , e4 ']'" :=
 End ExpressionNotations.
 
 (* Lvals: Lvar (mklvar x), Lnone dummy_var_info ty, Laset, Lmem, Lasub
-   are handled within coq_copn and call notations as raw Coq terms.
+   are handled within rocq_copn and call notations as raw Coq terms.
    Direct lval notations for assignments use Lvar (simple variable) and
    Laset/Lmem for array/memory store instructions. *)
 
@@ -841,11 +841,11 @@ Notation "x [ e1 ] = e2 ; '/*' 'u256' '*/'" :=
   (mkI' (Cassgn (Laset Aligned AAscale U256 (mklvar x) e1) AT_none (aword U256) e2))
   (in custom instr at level 10, x constr at level 0, e1 custom expr, e2 custom expr) : expr_scope.
 
-(* --- Intrinsic calls (Copn): coq_copn [lvals] (mkopn "name") [args] ; --- *)
+(* --- Intrinsic calls (Copn): rocq_copn [lvals] (mkopn "name") [args] ; --- *)
 (* Generic notation that handles ALL intrinsic patterns.                      *)
 (* lvals and args are raw Coq terms (seq lval and seq pexpr).                *)
 
-Notation "'coq_copn' lvs name args ;" :=
+Notation "'rocq_copn' lvs name args ;" :=
   (mkI' (Copn lvs AT_none name args))
   (in custom instr at level 10,
    lvs constr at level 0, name constr at level 0, args constr at level 0)
@@ -880,7 +880,7 @@ Notation "x = e ; /* 'int' */"   := (mkI' (Cassgn (Lvar (mklvar x)) AT_none aint
 
 (* Wrong: the return statement should be part of the fundef notation, as it determines the return variables. *)
 
-(* Return statements are no longer printed as instructions in coq mode.      *)
+(* Return statements are no longer printed as instructions in rocq mode.      *)
 (* The return variables are part of the FN ... WITH notation (the res list). *)
 
 (* --- Assignment with array type: x = e ; /* uN[len] */ --- *)
@@ -973,7 +973,7 @@ Notation "'for' v = ( e1 ) 'downto' ( e2 ) { c }" :=
 (* Generic function declaration: FN name WITH tyin params tyout res { body } *)
 (* This is the ONLY function notation — it handles all signatures via explicit
    Coq lists for types, parameters, return types, and return variables. *)
-(* The compiler outputs this format with -coq flag. *)
+(* The compiler outputs this format with -rocq flag. *)
 
 Notation "'FN' name 'WITH' tyin params tyout res { c }" :=
   (mkfunname name, mkfundef tyin params c tyout res)
@@ -1186,25 +1186,25 @@ Check expr:( _EQ("a", "b", "c", "d") ).
 Check expr:( _uLT("a", "b", "c", "d") ).
 Check expr:( _sLT("a", "b", "c", "d") ).
 
-(* Intrinsic calls using coq_copn *)
+(* Intrinsic calls using rocq_copn *)
 Check cmd:(
-  coq_copn [:: Lvar (mklvar "x")] (mkopn "MOV_32") [:: (expr:("y") : pexpr)] ;
+  rocq_copn [:: Lvar (mklvar "x")] (mkopn "MOV_32") [:: (expr:("y") : pexpr)] ;
 ).
 
 Check cmd:(
-  coq_copn [:: Lvar (mklvar "x")] (mkopn "ADD_64") [:: (expr:("y") : pexpr); (expr:("z") : pexpr)] ;
+  rocq_copn [:: Lvar (mklvar "x")] (mkopn "ADD_64") [:: (expr:("y") : pexpr); (expr:("z") : pexpr)] ;
 ).
 
 Check cmd:(
-  coq_copn [:: Lvar (mklvar "x")] (mkopn "SHLD_16") [:: (expr:("a") : pexpr); (expr:("b") : pexpr); (expr:((cast 8u) #3) : pexpr)] ;
+  rocq_copn [:: Lvar (mklvar "x")] (mkopn "SHLD_16") [:: (expr:("a") : pexpr); (expr:("b") : pexpr); (expr:((cast 8u) #3) : pexpr)] ;
 ).
 
 Check cmd:(
-  coq_copn [:: Lvar (mklvar "x")] (mkopn "set0_128") [::] ;
+  rocq_copn [:: Lvar (mklvar "x")] (mkopn "set0_128") [::] ;
 ).
 
 Check cmd:(
-  coq_copn [:: Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lvar (mklvar "x")] (mkopn "ADD_8") [:: (expr:("a") : pexpr); (expr:("b") : pexpr)] ;
+  rocq_copn [:: Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lnone dummy_var_info abool; Lvar (mklvar "x")] (mkopn "ADD_8") [:: (expr:("a") : pexpr); (expr:("b") : pexpr)] ;
 ).
 
 (* Function call with 2 returns *)
