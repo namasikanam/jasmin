@@ -4,6 +4,105 @@ open Wsize
 open Operators
 
 module F = Format
+module SS = Set.Make(String)
+
+(* -------------------------------------------------------------------- *)
+(* Name sanitization: turn Jasmin names into valid Rocq identifiers *)
+
+let sanitize_char c =
+  if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+     || (c >= '0' && c <= '9') || c = '_' then c
+  else '_'
+
+let sanitize_name prefix s =
+  let buf = Buffer.create (String.length prefix + String.length s) in
+  Buffer.add_string buf prefix;
+  String.iter (fun c -> Buffer.add_char buf (sanitize_char c)) s;
+  Buffer.contents buf
+
+(* -------------------------------------------------------------------- *)
+(* Name collection: gather all variable and function names in a program *)
+
+let collect_var_name acc (x : var) = SS.add x.v_name acc
+let collect_var_i_name acc (x : var_i) = collect_var_name acc (L.unloc x)
+let collect_gvar_name acc (x : int ggvar) = collect_var_i_name acc x.gv
+
+let rec collect_expr_names acc = function
+  | Pconst _ | Pbool _ | Parr_init _ -> acc
+  | Pvar gv -> collect_gvar_name acc gv
+  | Pget (_, _, _, gv, e) -> collect_expr_names (collect_gvar_name acc gv) e
+  | Psub (_, _, _, gv, e) -> collect_expr_names (collect_gvar_name acc gv) e
+  | Pload (_, _, e) -> collect_expr_names acc e
+  | Papp1 (_, e) -> collect_expr_names acc e
+  | Papp2 (_, e1, e2) -> collect_expr_names (collect_expr_names acc e1) e2
+  | PappN (_, es) -> List.fold_left collect_expr_names acc es
+  | Pif (_, e1, e2, e3) ->
+    collect_expr_names (collect_expr_names (collect_expr_names acc e1) e2) e3
+
+let collect_lval_names acc = function
+  | Lnone _ -> acc
+  | Lvar x -> collect_var_i_name acc x
+  | Lmem (_, _, _, e) -> collect_expr_names acc e
+  | Laset (_, _, _, x, e) -> collect_expr_names (collect_var_i_name acc x) e
+  | Lasub (_, _, _, x, e) -> collect_expr_names (collect_var_i_name acc x) e
+
+let rec collect_eassert_names acc = function
+  | Pexpr e -> collect_expr_names acc e
+  | PappN_safety (_, es) -> List.fold_left collect_expr_names acc es
+  | Pis_var_init x -> collect_var_i_name acc x
+  | Pis_mem_init (e1, e2) -> collect_expr_names (collect_expr_names acc e1) e2
+  | Pand (a1, a2) -> collect_eassert_names (collect_eassert_names acc a1) a2
+
+let rec collect_instr_names acc i =
+  match i.i_desc with
+  | Cassgn (lv, _, _, e) ->
+    collect_expr_names (collect_lval_names acc lv) e
+  | Copn (lvs, _, _, es) ->
+    List.fold_left collect_expr_names
+      (List.fold_left collect_lval_names acc lvs) es
+  | Csyscall (lvs, _, es) ->
+    List.fold_left collect_expr_names
+      (List.fold_left collect_lval_names acc lvs) es
+  | Cassert (_, a) -> collect_eassert_names acc a
+  | Cif (e, c1, c2) ->
+    collect_stmt_names (collect_stmt_names (collect_expr_names acc e) c1) c2
+  | Cfor (x, (_, lo, hi), c) ->
+    collect_stmt_names
+      (collect_expr_names (collect_expr_names (collect_var_i_name acc x) lo) hi) c
+  | Cwhile (_, c1, e, _, c2) ->
+    collect_stmt_names (collect_expr_names (collect_stmt_names acc c1) e) c2
+  | Ccall (lvs, _, es) ->
+    List.fold_left collect_expr_names
+      (List.fold_left collect_lval_names acc lvs) es
+
+and collect_stmt_names acc c = List.fold_left collect_instr_names acc c
+
+let collect_fun_names acc (fd : (unit, 'a) func) =
+  let acc = List.fold_left (fun a (x : var) -> SS.add x.v_name a) acc fd.f_args in
+  let acc = List.fold_left (fun a x -> collect_var_i_name a x) acc fd.f_ret in
+  collect_stmt_names acc fd.f_body
+
+let collect_funname_names (funcs : (unit, 'a) func list) =
+  List.fold_left (fun acc fd ->
+    let acc = SS.add fd.f_name.fn_name acc in
+    (* Also collect funnames from Ccall sites *)
+    let rec collect_from_stmt acc c = List.fold_left collect_from_instr acc c
+    and collect_from_instr acc i =
+      match i.i_desc with
+      | Ccall (_, fn, _) -> SS.add fn.fn_name acc
+      | Cif (_, c1, c2) -> collect_from_stmt (collect_from_stmt acc c1) c2
+      | Cfor (_, _, c) -> collect_from_stmt acc c
+      | Cwhile (_, c1, _, _, c2) -> collect_from_stmt (collect_from_stmt acc c1) c2
+      | _ -> acc
+    in
+    collect_from_stmt acc fd.f_body
+  ) SS.empty funcs
+
+let collect_prog_names ((gd, funcs) : (unit, _) prog) =
+  let vars = List.fold_left collect_fun_names SS.empty funcs in
+  let vars = List.fold_left (fun acc (x, _) -> collect_var_name acc x) vars gd in
+  let funs = collect_funname_names funcs in
+  (vars, funs)
 
 (* -------------------------------------------------------------------- *)
 (* Helpers *)
@@ -56,10 +155,10 @@ let pp_signedness fmt = function
 (* Types *)
 
 let pp_atype fmt = function
-  | Bty Bool  -> F.fprintf fmt "sbool"
-  | Bty Int   -> F.fprintf fmt "sint"
-  | Bty (U ws) -> F.fprintf fmt "(sword %a)" pp_wsize ws
-  | Arr (ws, n) -> F.fprintf fmt "(sarr %a %d)" pp_wsize ws n
+  | Bty Bool  -> F.fprintf fmt "abool"
+  | Bty Int   -> F.fprintf fmt "aint"
+  | Bty (U ws) -> F.fprintf fmt "(aword %a)" pp_wsize ws
+  | Arr (ws, n) -> F.fprintf fmt "(aarr %a %d)" pp_wsize ws n
 
 (* -------------------------------------------------------------------- *)
 (* Aligned *)
@@ -100,22 +199,23 @@ let pp_dir fmt = function
   | Expr.DownTo -> F.fprintf fmt "DownTo"
 
 (* -------------------------------------------------------------------- *)
-(* Variables *)
+(* Variables - use sanitized identifiers *)
 
 let pp_var fmt (x : var) =
-  F.fprintf fmt "(mkvar %S)" x.v_name
+  F.fprintf fmt "%s" (sanitize_name "v_" x.v_name)
 
 let pp_var_i fmt (x : var_i) =
   let v = L.unloc x in
-  F.fprintf fmt "(mklvar %S)" v.v_name
+  F.fprintf fmt "%s" (sanitize_name "v_" v.v_name)
 
 (* -------------------------------------------------------------------- *)
 (* Gvar *)
 
 let pp_gvar fmt (x : int ggvar) =
+  let name = sanitize_name "v_" (L.unloc x.gv).v_name in
   match x.gs with
-  | Expr.Slocal -> F.fprintf fmt "(mk_lvar (mklvar %S))" (L.unloc x.gv).v_name
-  | Expr.Sglob  -> F.fprintf fmt "(mk_gvar (mklvar %S))" (L.unloc x.gv).v_name
+  | Expr.Slocal -> F.fprintf fmt "(mk_lvar %s)" name
+  | Expr.Sglob  -> F.fprintf fmt "(mk_gvar %s)" name
 
 (* -------------------------------------------------------------------- *)
 (* Op_kind *)
@@ -241,12 +341,55 @@ let pp_opN_safety fmt = function
   | Ois_barr_init len -> F.fprintf fmt "(Ois_barr_init %a)" pp_positive len
 
 (* -------------------------------------------------------------------- *)
-(* Sopn - architecture-dependent operations *)
+(* Sopn - architecture-dependent and pseudo operations *)
 
-let pp_sopn pd msfsz asmOp fmt o =
-  (* We print the string name as a comment for readability *)
-  let s = Sopn.string_of_sopn pd msfsz asmOp o in
-  F.fprintf fmt "(%s) (* %s *)" s s
+let pp_spill_op fmt = function
+  | Pseudo_operator.Spill   -> F.fprintf fmt "Spill"
+  | Pseudo_operator.Unspill -> F.fprintf fmt "Unspill"
+
+let pp_cil_atype fmt = function
+  | Type.Coq_abool -> F.fprintf fmt "abool"
+  | Type.Coq_aint  -> F.fprintf fmt "aint"
+  | Type.Coq_aword ws -> F.fprintf fmt "(aword %a)" pp_wsize ws
+  | Type.Coq_aarr (ws, p) -> F.fprintf fmt "(aarr %a %a)" pp_wsize ws pp_positive p
+
+let pp_pseudo_operator fmt = function
+  | Pseudo_operator.Ospill (o, tys) ->
+    F.fprintf fmt "(Ospill %a %a)" pp_spill_op o (pp_list "" pp_cil_atype) tys
+  | Pseudo_operator.Ocopy (ws, p) ->
+    F.fprintf fmt "(Ocopy %a %a)" pp_wsize ws pp_positive p
+  | Pseudo_operator.Odeclassify ty ->
+    F.fprintf fmt "(Odeclassify %a)" pp_cil_atype ty
+  | Pseudo_operator.Odeclassify_mem p ->
+    F.fprintf fmt "(Odeclassify_mem %a)" pp_positive p
+  | Pseudo_operator.Onop -> F.fprintf fmt "Onop"
+  | Pseudo_operator.Omulu ws ->
+    F.fprintf fmt "(Omulu %a)" pp_wsize ws
+  | Pseudo_operator.Oaddcarry ws ->
+    F.fprintf fmt "(Oaddcarry %a)" pp_wsize ws
+  | Pseudo_operator.Osubcarry ws ->
+    F.fprintf fmt "(Osubcarry %a)" pp_wsize ws
+  | Pseudo_operator.Oswap ty ->
+    F.fprintf fmt "(Oswap %a)" pp_cil_atype ty
+
+let pp_slh_op fmt = function
+  | Slh_ops.SLHinit -> F.fprintf fmt "SLHinit"
+  | Slh_ops.SLHupdate -> F.fprintf fmt "SLHupdate"
+  | Slh_ops.SLHmove -> F.fprintf fmt "SLHmove"
+  | Slh_ops.SLHprotect ws ->
+    F.fprintf fmt "(SLHprotect %a)" pp_wsize ws
+  | Slh_ops.SLHprotect_ptr (ws, p) ->
+    F.fprintf fmt "(SLHprotect_ptr %a %a)" pp_wsize ws pp_positive p
+  | Slh_ops.SLHprotect_ptr_fail (ws, p) ->
+    F.fprintf fmt "(SLHprotect_ptr_fail %a %a)" pp_wsize ws pp_positive p
+
+let pp_sopn pp_asm_op fmt = function
+  | Sopn.Opseudo_op o ->
+    F.fprintf fmt "(Opseudo_op %a)" pp_pseudo_operator o
+  | Sopn.Oslh o ->
+    F.fprintf fmt "(Oslh %a)" pp_slh_op o
+  | Sopn.Oasm o ->
+    F.fprintf fmt "(Oasm %a)" pp_asm_op o
 
 (* -------------------------------------------------------------------- *)
 (* Syscall *)
@@ -354,14 +497,14 @@ let pp_lvals fmt lvs = pp_list "" pp_lval fmt lvs
 (* -------------------------------------------------------------------- *)
 (* Instructions *)
 
-let rec pp_instr_r pd msfsz asmOp fmt = function
+let rec pp_instr_r pp_asm_op fmt = function
   | Cassgn (lv, tag, ty, e) ->
     F.fprintf fmt "@[<hov 2>(Cassgn %a@ %a %a@ %a)@]"
       pp_lval lv pp_assgn_tag tag pp_atype ty pp_expr e
 
   | Copn (lvs, tag, op, es) ->
     F.fprintf fmt "@[<hov 2>(Copn %a@ %a %a@ %a)@]"
-      pp_lvals lvs pp_assgn_tag tag (pp_sopn pd msfsz asmOp) op pp_exprs es
+      pp_lvals lvs pp_assgn_tag tag (pp_sopn pp_asm_op) op pp_exprs es
 
   | Csyscall (lvs, sc, es) ->
     F.fprintf fmt "@[<hov 2>(Csyscall %a@ %a@ %a)@]"
@@ -373,30 +516,30 @@ let rec pp_instr_r pd msfsz asmOp fmt = function
 
   | Cif (e, c1, c2) ->
     F.fprintf fmt "@[<v 2>(Cif %a@ %a@ %a)@]"
-      pp_expr e (pp_stmt pd msfsz asmOp) c1 (pp_stmt pd msfsz asmOp) c2
+      pp_expr e (pp_stmt pp_asm_op) c1 (pp_stmt pp_asm_op) c2
 
   | Cfor (x, (dir, lo, hi), c) ->
     F.fprintf fmt "@[<v 2>(Cfor %a (%a, %a, %a)@ %a)@]"
       pp_var_i x pp_dir dir pp_expr lo pp_expr hi
-      (pp_stmt pd msfsz asmOp) c
+      (pp_stmt pp_asm_op) c
 
   | Cwhile (al, c1, e, _, c2) ->
     F.fprintf fmt "@[<v 2>(Cwhile %a@ %a@ %a@ dummy_instr_info@ %a)@]"
       pp_align al
-      (pp_stmt pd msfsz asmOp) c1
+      (pp_stmt pp_asm_op) c1
       pp_expr e
-      (pp_stmt pd msfsz asmOp) c2
+      (pp_stmt pp_asm_op) c2
 
   | Ccall (lvs, fn, es) ->
-    F.fprintf fmt "@[<hov 2>(Ccall %a@ %S@ %a)@]"
-      pp_lvals lvs fn.fn_name pp_exprs es
+    F.fprintf fmt "@[<hov 2>(Ccall %a@ %s@ %a)@]"
+      pp_lvals lvs (sanitize_name "fn_" fn.fn_name) pp_exprs es
 
-and pp_instr pd msfsz asmOp fmt i =
+and pp_instr pp_asm_op fmt i =
   F.fprintf fmt "@[<hov 2>(MkI dummy_instr_info@ %a)@]"
-    (pp_instr_r pd msfsz asmOp) i.i_desc
+    (pp_instr_r pp_asm_op) i.i_desc
 
-and pp_stmt pd msfsz asmOp fmt c =
-  pp_list "" (pp_instr pd msfsz asmOp) fmt c
+and pp_stmt pp_asm_op fmt c =
+  pp_list "" (pp_instr pp_asm_op) fmt c
 
 (* -------------------------------------------------------------------- *)
 (* Functions *)
@@ -406,23 +549,23 @@ let pp_call_conv fmt = function
   | FInfo.Internal   -> F.fprintf fmt "Internal"
   | FInfo.Subroutine -> F.fprintf fmt "Subroutine"
 
-let pp_fun pd msfsz asmOp fmt fd =
-  F.fprintf fmt "@[<v 0>(* fn %s *)@ " fd.f_name.fn_name;
+let pp_fun pp_asm_op fmt fd =
   F.fprintf fmt "@[<v 2>{|@ ";
-  F.fprintf fmt "f_info := tt;@ ";
+  F.fprintf fmt "f_info := FunInfo.witness;@ ";
   F.fprintf fmt "f_contract := None;@ ";
   F.fprintf fmt "f_tyin := %a;@ " (pp_list "" pp_atype) fd.f_tyin;
-  F.fprintf fmt "f_params := %a;@ " (pp_list "" pp_var) fd.f_args;
-  F.fprintf fmt "f_body :=@ @[<v 0>%a@];@ " (pp_stmt pd msfsz asmOp) fd.f_body;
+  F.fprintf fmt "f_params := %a;@ "
+    (pp_list "" (fun fmt (x : var) -> F.fprintf fmt "%s" (sanitize_name "v_" x.v_name))) fd.f_args;
+  F.fprintf fmt "f_body :=@ @[<v 0>%a@];@ " (pp_stmt pp_asm_op) fd.f_body;
   F.fprintf fmt "f_tyout := %a;@ " (pp_list "" pp_atype) fd.f_tyout;
   F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) (List.map (fun x -> x) fd.f_ret);
   F.fprintf fmt "f_extra := tt;@ ";
-  F.fprintf fmt "@]|}@]"
+  F.fprintf fmt "@]|}"
 
-let pp_fun_decl pd msfsz asmOp fmt fd =
-  F.fprintf fmt "@[<v 0>(%S,@ %a)@]"
-    fd.f_name.fn_name
-    (pp_fun pd msfsz asmOp) fd
+let pp_fun_decl pp_asm_op fmt fd =
+  F.fprintf fmt "(%s,@ %a)"
+    (sanitize_name "fn_" fd.f_name.fn_name)
+    (pp_fun pp_asm_op) fd
 
 (* -------------------------------------------------------------------- *)
 (* Globals *)
@@ -430,29 +573,74 @@ let pp_fun_decl pd msfsz asmOp fmt fd =
 let pp_glob_value fmt (x, gd) =
   match gd with
   | Global.Gword (ws, w) ->
-    F.fprintf fmt "(%a, Gword %a %s)"
-      pp_var x pp_wsize ws (Z.to_string (Conv.z_of_word ws w))
+    F.fprintf fmt "(%a : var, @Gword %a (wrepr %a %a))"
+      pp_var x pp_wsize ws pp_wsize ws pp_z (Conv.z_of_word ws w)
   | Global.Garr (p, t) ->
     let ws, arr = Conv.to_array x.v_ty p t in
-    F.fprintf fmt "(%a, Garr (* u%d[%d] *))"
-      pp_var x (int_of_ws ws) (Array.length arr)
+    (* Total size in bytes *)
+    let ws_bytes = int_of_ws ws / 8 in
+    let n = Array.length arr in
+    let total_bytes = n * ws_bytes in
+    (* Extract individual bytes from each word in little-endian order *)
+    let bytes = Array.make total_bytes Z.zero in
+    Array.iteri (fun i w ->
+      for b = 0 to ws_bytes - 1 do
+        let byte_val = Z.logand (Z.shift_right w (b * 8)) (Z.of_int 255) in
+        bytes.(i * ws_bytes + b) <- byte_val
+      done
+    ) arr;
+    (* Print as nested Mz.set calls *)
+    F.fprintf fmt "@[<hov 2>(%a : var,@ (@Garr %a@ {| WArray.arr_data :=@ "
+      pp_var x pp_positive p;
+    let started = ref false in
+    Array.iter (fun _byte_val ->
+      if !started then
+        F.fprintf fmt "(Mz.set@ "
+      else begin
+        started := true;
+        F.fprintf fmt "(Mz.set@ "
+      end
+    ) bytes;
+    F.fprintf fmt "(Mz.empty u8)";
+    Array.iteri (fun i byte_val ->
+      F.fprintf fmt "@ %a@ (wrepr U8 %a))"
+        pp_z (Z.of_int i) pp_z byte_val
+    ) bytes;
+    F.fprintf fmt "@ |}))@]"
+
+(* -------------------------------------------------------------------- *)
+(* Definition bindings *)
+
+let pp_definitions fmt (vars, funs) =
+  SS.iter (fun name ->
+    F.fprintf fmt "Definition %s := mkvar %S.@ "
+      (sanitize_name "v_" name) name
+  ) vars;
+  SS.iter (fun name ->
+    F.fprintf fmt "Definition %s := mkfun %S.@ "
+      (sanitize_name "fn_" name) name
+  ) funs;
+  F.fprintf fmt "@ "
 
 (* -------------------------------------------------------------------- *)
 (* Program *)
 
-let pp_prog pd msfsz asmOp fmt ((gd, funcs) : (unit, _) prog) =
+let pp_prog pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
+  (* Emit variable and funname definitions *)
+  let names = collect_prog_names (gd, funcs) in
   F.fprintf fmt "@[<v 0>";
-  F.fprintf fmt "(* Globals *)@ ";
-  F.fprintf fmt "(*@ ";
-  List.iter (fun g -> F.fprintf fmt "  %a@ " pp_glob_value g) gd;
-  F.fprintf fmt "*)@ @ ";
-  F.fprintf fmt "(* Functions *)@ ";
-  F.fprintf fmt "@[<v 0>%a@]"
-    (Utils.pp_list "@ @ " (pp_fun_decl pd msfsz asmOp)) (List.rev funcs);
-  F.fprintf fmt "@]@."
+  pp_definitions fmt names;
+  F.fprintf fmt "Definition program :=@ ";
+  F.fprintf fmt "@[<v 0>{|@ ";
+  F.fprintf fmt "  p_funcs := %a;@ "
+    (pp_list "" (pp_fun_decl pp_asm_op)) (List.rev funcs);
+  F.fprintf fmt "  p_globs := %a;@ "
+    (pp_list "" pp_glob_value) gd;
+  F.fprintf fmt "  p_extra := tt;@ ";
+  F.fprintf fmt "|}.@]@]@."
 
 (* -------------------------------------------------------------------- *)
 (* Entry point *)
 
-let extract prog _arch pd msfsz asmOp fmt =
-  pp_prog pd msfsz asmOp fmt prog
+let extract prog _arch _pd _msfsz _asmOp pp_asm_op fmt =
+  pp_prog pp_asm_op fmt prog
