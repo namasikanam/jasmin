@@ -6,13 +6,10 @@ open Operators
 module F = Format
 module SS = Set.Make(String)
 
-(* TODO Shouldn't parentheses go on the caller? *)
-
 (* -------------------------------------------------------------------- *)
-(* Name sanitization: turn Jasmin names into valid Rocq identifiers *)
-
-(* TODO Is this really needed? For anything other than namespaces? it looks more
-   complicated than a map... *)
+(* Name sanitization: turn Jasmin names into valid Rocq identifiers.
+   Jasmin names may contain '.', '#', and other non-alphanumeric characters
+   (e.g. after inlining: "f.x.42", after SSA: "x#3"). *)
 
 let sanitize_char c =
   if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
@@ -28,88 +25,32 @@ let sanitize_name prefix s =
 (* -------------------------------------------------------------------- *)
 (* Name collection: gather all variable and function names in a program *)
 
-(* TODO isn't all of this already in prog? e.g., [vars_fc]
-   For function names, programs already have the list of [funname]s... *)
-
-let collect_var_name acc (x : var) = SS.add x.v_name acc
-let collect_var_i_name acc (x : var_i) = collect_var_name acc (L.unloc x)
-let collect_gvar_name acc (x : int ggvar) = collect_var_i_name acc x.gv
-
-let rec collect_expr_names acc = function
-  | Pconst _ | Pbool _ | Parr_init _ -> acc
-  | Pvar gv -> collect_gvar_name acc gv
-  | Pget (_, _, _, gv, e) -> collect_expr_names (collect_gvar_name acc gv) e
-  | Psub (_, _, _, gv, e) -> collect_expr_names (collect_gvar_name acc gv) e
-  | Pload (_, _, e) -> collect_expr_names acc e
-  | Papp1 (_, e) -> collect_expr_names acc e
-  | Papp2 (_, e1, e2) -> collect_expr_names (collect_expr_names acc e1) e2
-  | PappN (_, es) -> List.fold_left collect_expr_names acc es
-  | Pif (_, e1, e2, e3) ->
-    collect_expr_names (collect_expr_names (collect_expr_names acc e1) e2) e3
-
-let collect_lval_names acc = function
-  | Lnone _ -> acc
-  | Lvar x -> collect_var_i_name acc x
-  | Lmem (_, _, _, e) -> collect_expr_names acc e
-  | Laset (_, _, _, x, e) -> collect_expr_names (collect_var_i_name acc x) e
-  | Lasub (_, _, _, x, e) -> collect_expr_names (collect_var_i_name acc x) e
-
-let rec collect_eassert_names acc = function
-  | Pexpr e -> collect_expr_names acc e
-  | PappN_safety (_, es) -> List.fold_left collect_expr_names acc es
-  | Pis_var_init x -> collect_var_i_name acc x
-  | Pis_mem_init (e1, e2) -> collect_expr_names (collect_expr_names acc e1) e2
-  | Pand (a1, a2) -> collect_eassert_names (collect_eassert_names acc a1) a2
-
-let rec collect_instr_names acc i =
-  match i.i_desc with
-  | Cassgn (lv, _, _, e) ->
-    collect_expr_names (collect_lval_names acc lv) e
-  | Copn (lvs, _, _, es) ->
-    List.fold_left collect_expr_names
-      (List.fold_left collect_lval_names acc lvs) es
-  | Csyscall (lvs, _, es) ->
-    List.fold_left collect_expr_names
-      (List.fold_left collect_lval_names acc lvs) es
-  | Cassert (_, a) -> collect_eassert_names acc a
-  | Cif (e, c1, c2) ->
-    collect_stmt_names (collect_stmt_names (collect_expr_names acc e) c1) c2
-  | Cfor (x, (_, lo, hi), c) ->
-    collect_stmt_names
-      (collect_expr_names (collect_expr_names (collect_var_i_name acc x) lo) hi) c
-  | Cwhile (_, c1, e, _, c2) ->
-    collect_stmt_names (collect_expr_names (collect_stmt_names acc c1) e) c2
-  | Ccall (lvs, _, es) ->
-    List.fold_left collect_expr_names
-      (List.fold_left collect_lval_names acc lvs) es
-
-and collect_stmt_names acc c = List.fold_left collect_instr_names acc c
-
-let collect_fun_names acc (fd : (unit, 'a) func) =
-  let acc = List.fold_left (fun a (x : var) -> SS.add x.v_name a) acc fd.f_args in
-  let acc = List.fold_left (fun a x -> collect_var_i_name a x) acc fd.f_ret in
-  collect_stmt_names acc fd.f_body
-
-let collect_funname_names (funcs : (unit, 'a) func list) =
-  List.fold_left (fun acc fd ->
-    let acc = SS.add fd.f_name.fn_name acc in
-    (* Also collect funnames from Ccall sites *)
-    let rec collect_from_stmt acc c = List.fold_left collect_from_instr acc c
-    and collect_from_instr acc i =
-      match i.i_desc with
-      | Ccall (_, fn, _) -> SS.add fn.fn_name acc
-      | Cif (_, c1, c2) -> collect_from_stmt (collect_from_stmt acc c1) c2
-      | Cfor (_, _, c) -> collect_from_stmt acc c
-      | Cwhile (_, c1, _, _, c2) -> collect_from_stmt (collect_from_stmt acc c1) c2
-      | _ -> acc
-    in
-    collect_from_stmt acc fd.f_body
-  ) SS.empty funcs
-
 let collect_prog_names ((gd, funcs) : (unit, _) prog) =
-  let vars = List.fold_left collect_fun_names SS.empty funcs in
-  let vars = List.fold_left (fun acc (x, _) -> collect_var_name acc x) vars gd in
-  let funs = collect_funname_names funcs in
+  let vars =
+    List.fold_left (fun acc fd ->
+      Sv.fold (fun v acc -> SS.add v.v_name acc) (vars_fc fd) acc
+    ) SS.empty funcs
+  in
+  let vars =
+    List.fold_left (fun acc (x, _) -> SS.add x.v_name acc) vars gd
+  in
+  let funs =
+    List.fold_left (fun acc fd ->
+      let acc = SS.add fd.f_name.fn_name acc in
+      Sv.fold (fun _ acc -> acc) (vars_fc fd) acc |> ignore;
+      (* Collect funnames from Ccall sites *)
+      let rec from_stmt acc c = List.fold_left from_instr acc c
+      and from_instr acc i =
+        match i.i_desc with
+        | Ccall (_, fn, _) -> SS.add fn.fn_name acc
+        | Cif (_, c1, c2) -> from_stmt (from_stmt acc c1) c2
+        | Cfor (_, _, c) -> from_stmt acc c
+        | Cwhile (_, c1, _, _, c2) -> from_stmt (from_stmt acc c1) c2
+        | _ -> acc
+      in
+      from_stmt acc fd.f_body
+    ) SS.empty funcs
+  in
   (vars, funs)
 
 (* -------------------------------------------------------------------- *)
@@ -121,10 +62,6 @@ let pp_list _sep pp fmt = function
     F.fprintf fmt "[:: @[<hov>%a@]]"
       (Utils.pp_list ";@ " pp) xs
 
-let pp_pair pp1 pp2 fmt (a, b) =
-  F.fprintf fmt "(%a, %a)" pp1 a pp2 b
-
-(* TODO there is pp_print_option *)
 let pp_option pp fmt = function
   | None -> F.fprintf fmt "None"
   | Some x -> F.fprintf fmt "(Some %a)" pp x
@@ -208,9 +145,9 @@ let pp_dir fmt = function
   | Expr.DownTo -> F.fprintf fmt "DownTo"
 
 (* -------------------------------------------------------------------- *)
-(* Variables - use sanitized identifiers *)
+(* Variables - use sanitized identifiers.
+   The v_ prefix avoids clashing with Rocq keywords and constructor names. *)
 
-(* TODO Why the [v_] prefix? *)
 let pp_var fmt (x : var) =
   F.fprintf fmt "%s" (sanitize_name "v_" x.v_name)
 
@@ -554,22 +491,16 @@ and pp_stmt pp_asm_op fmt c =
 (* -------------------------------------------------------------------- *)
 (* Functions *)
 
-(* unused? *)
-let pp_call_conv fmt = function
-  | FInfo.Export     -> F.fprintf fmt "Export"
-  | FInfo.Internal   -> F.fprintf fmt "Internal"
-  | FInfo.Subroutine -> F.fprintf fmt "Subroutine"
-
 let pp_fun pp_asm_op fmt fd =
   F.fprintf fmt "@[<v 2>{|@ ";
   F.fprintf fmt "f_info := FunInfo.witness;@ ";
   F.fprintf fmt "f_contract := None;@ ";
   F.fprintf fmt "f_tyin := %a;@ " (pp_list "" pp_atype) fd.f_tyin;
   F.fprintf fmt "f_params := %a;@ "
-    (pp_list "" (fun fmt (x : var) -> F.fprintf fmt "%s" (sanitize_name "v_" x.v_name))) fd.f_args;
+    (pp_list "" pp_var) fd.f_args;
   F.fprintf fmt "f_body :=@ @[<v 0>%a@];@ " (pp_stmt pp_asm_op) fd.f_body;
   F.fprintf fmt "f_tyout := %a;@ " (pp_list "" pp_atype) fd.f_tyout;
-  F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) (List.map (fun x -> x (* ?? *)) fd.f_ret);
+  F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) fd.f_ret;
   F.fprintf fmt "f_extra := tt;@ ";
   F.fprintf fmt "@]|}"
 
@@ -588,7 +519,6 @@ let pp_glob_value fmt (x, gd) =
       pp_var x pp_wsize ws pp_wsize ws pp_z (Conv.z_of_word ws w)
   | Global.Garr (p, t) ->
     let ws, arr = Conv.to_array x.v_ty p t in
-    (* Total size in bytes *)
     let ws_bytes = int_of_ws ws / 8 in
     let n = Array.length arr in
     let total_bytes = n * ws_bytes in
@@ -603,14 +533,8 @@ let pp_glob_value fmt (x, gd) =
     (* Print as nested Mz.set calls *)
     F.fprintf fmt "@[<hov 2>(%a : var,@ (@Garr %a@ {| WArray.arr_data :=@ "
       pp_var x pp_positive p;
-    let started = ref false in
     Array.iter (fun _byte_val ->
-      if !started then
-        F.fprintf fmt "(Mz.set@ "
-      else begin
-        started := true;
-        F.fprintf fmt "(Mz.set@ "
-      end
+      F.fprintf fmt "(Mz.set@ "
     ) bytes;
     F.fprintf fmt "(Mz.empty u8)";
     Array.iteri (fun i byte_val ->
@@ -622,8 +546,6 @@ let pp_glob_value fmt (x, gd) =
 (* -------------------------------------------------------------------- *)
 (* Definition bindings *)
 
-(* TODO define variables as [gvar]s with the correct scope to avoid using
-   mk_var_i, mk_gvar, and mk_lvar in the code *)
 let pp_definitions fmt (vars, funs) =
   SS.iter (fun name ->
     F.fprintf fmt "Definition %s := mkvar %S.@ "
@@ -638,11 +560,7 @@ let pp_definitions fmt (vars, funs) =
 (* -------------------------------------------------------------------- *)
 (* Program *)
 
-(* TODO
-   - print each function body and function definition separately
-   - print imports *)
 let pp_prog pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
-  (* Emit variable and funname definitions *)
   let names = collect_prog_names (gd, funcs) in
   F.fprintf fmt "@[<v 0>";
   pp_definitions fmt names;
