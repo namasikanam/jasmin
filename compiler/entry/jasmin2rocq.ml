@@ -7,7 +7,10 @@ module F = Format
 
 (* -------------------------------------------------------------------- *)
 (* Architecture-specific asm_op printers for Rocq *)
+(* TODO None of this should be here, the architecture-specific parts go in
+   arch_full and generic parts in src *)
 
+(* TODO This is not architecture specific *)
 let pp_wsize fmt = function
   | Wsize.U8   -> F.fprintf fmt "U8"
   | Wsize.U16  -> F.fprintf fmt "U16"
@@ -16,6 +19,7 @@ let pp_wsize fmt = function
   | Wsize.U128 -> F.fprintf fmt "U128"
   | Wsize.U256 -> F.fprintf fmt "U256"
 
+(* TODO This is not architecture specific *)
 let pp_velem fmt = function
   | Wsize.VE8  -> F.fprintf fmt "VE8"
   | Wsize.VE16 -> F.fprintf fmt "VE16"
@@ -42,6 +46,18 @@ let pp_reg_kind fmt = function
   | Wsize.Normal -> F.fprintf fmt "Normal"
   | Wsize.Extra  -> F.fprintf fmt "Extra"
 
+(* TODO
+   - move the the argument printer (e.g., [pp_ws]) as an argument and have only
+     one [pp_base] function
+   - if [pp_ws] and the rest take tuples instead of separate arguments there is
+     no need to destruct the arguments of each constructor (e.g.,
+     [MOVSX a -> pp_base_ws2 msb "MOVSX" fmt a])
+   - The pp_base function should use a printer for option types defined in torocq
+   - Move the printing of x86_op (e.g., [MOV ws]) and extra ops as separate
+     functions and then make this function architecture generic
+   - The printers for x86_op and extra ops should go in full_arch or something
+     like that
+   - Why the special case for [VPINSR]? *)
 let pp_x86_op fmt (o : (_, _, _, _, _, X86_instr_decl.x86_op, X86_extra.x86_extra_op) Arch_extra.extended_op) =
   let pp_base msb name fmt = match msb with
     | None   -> F.fprintf fmt "(BaseOp (None, %s))" name
@@ -233,7 +249,7 @@ let parse_and_extract arch call_conv idirs =
   let extract output pass file warn =
     if not warn then nowarning ();
     let prog =
-      parse_and_compile (module A) ~wi2i:false pass file idirs
+      parse_and_compile (module A) ~wi2i:false pass file idirs (* TODO why false wi2i? *)
     in
     let fmt, close =
       match output with
@@ -245,7 +261,7 @@ let parse_and_extract arch call_conv idirs =
     in
     (try
        ToRocq.extract prog arch A.reg_size A.msf_size A.asmOp
-         (Obj.magic pp_x86_op) fmt;
+         (Obj.magic pp_x86_op) fmt; (* TODO use modules to avoid Obj.magic *)
        close ()
      with e ->
        BatPervasives.ignore_exceptions (fun () -> close ()) ();
@@ -282,8 +298,10 @@ let file =
   let doc = "The Jasmin source file to extract" in
   Arg.(required & pos 0 (some non_dir_file) None & info [] ~docv:"JAZZ" ~doc)
 
+(* TODO include slicing *)
+
 let () =
-  let doc = "Extract Jasmin program to Rocq (Coq) representation" in
+  let doc = "Extract Jasmin program to Rocq representation" in
   let man =
     [
       `S Manpage.s_environment;

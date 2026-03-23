@@ -6,8 +6,13 @@ open Operators
 module F = Format
 module SS = Set.Make(String)
 
+(* TODO Shouldn't parentheses go on the caller? *)
+
 (* -------------------------------------------------------------------- *)
 (* Name sanitization: turn Jasmin names into valid Rocq identifiers *)
+
+(* TODO Is this really needed? For anything other than namespaces? it looks more
+   complicated than a map... *)
 
 let sanitize_char c =
   if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
@@ -22,6 +27,9 @@ let sanitize_name prefix s =
 
 (* -------------------------------------------------------------------- *)
 (* Name collection: gather all variable and function names in a program *)
+
+(* TODO isn't all of this already in prog? e.g., [vars_fc]
+   For function names, programs already have the list of [funname]s... *)
 
 let collect_var_name acc (x : var) = SS.add x.v_name acc
 let collect_var_i_name acc (x : var_i) = collect_var_name acc (L.unloc x)
@@ -116,6 +124,7 @@ let pp_list _sep pp fmt = function
 let pp_pair pp1 pp2 fmt (a, b) =
   F.fprintf fmt "(%a, %a)" pp1 a pp2 b
 
+(* TODO there is pp_print_option *)
 let pp_option pp fmt = function
   | None -> F.fprintf fmt "None"
   | Some x -> F.fprintf fmt "(Some %a)" pp x
@@ -201,6 +210,7 @@ let pp_dir fmt = function
 (* -------------------------------------------------------------------- *)
 (* Variables - use sanitized identifiers *)
 
+(* TODO Why the [v_] prefix? *)
 let pp_var fmt (x : var) =
   F.fprintf fmt "%s" (sanitize_name "v_" x.v_name)
 
@@ -341,7 +351,7 @@ let pp_opN_safety fmt = function
   | Ois_barr_init len -> F.fprintf fmt "(Ois_barr_init %a)" pp_positive len
 
 (* -------------------------------------------------------------------- *)
-(* Sopn - architecture-dependent and pseudo operations *)
+(* Sopn *)
 
 let pp_spill_op fmt = function
   | Pseudo_operator.Spill   -> F.fprintf fmt "Spill"
@@ -544,6 +554,7 @@ and pp_stmt pp_asm_op fmt c =
 (* -------------------------------------------------------------------- *)
 (* Functions *)
 
+(* unused? *)
 let pp_call_conv fmt = function
   | FInfo.Export     -> F.fprintf fmt "Export"
   | FInfo.Internal   -> F.fprintf fmt "Internal"
@@ -558,7 +569,7 @@ let pp_fun pp_asm_op fmt fd =
     (pp_list "" (fun fmt (x : var) -> F.fprintf fmt "%s" (sanitize_name "v_" x.v_name))) fd.f_args;
   F.fprintf fmt "f_body :=@ @[<v 0>%a@];@ " (pp_stmt pp_asm_op) fd.f_body;
   F.fprintf fmt "f_tyout := %a;@ " (pp_list "" pp_atype) fd.f_tyout;
-  F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) (List.map (fun x -> x) fd.f_ret);
+  F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) (List.map (fun x -> x (* ?? *)) fd.f_ret);
   F.fprintf fmt "f_extra := tt;@ ";
   F.fprintf fmt "@]|}"
 
@@ -611,6 +622,8 @@ let pp_glob_value fmt (x, gd) =
 (* -------------------------------------------------------------------- *)
 (* Definition bindings *)
 
+(* TODO define variables as [gvar]s with the correct scope to avoid using
+   mk_var_i, mk_gvar, and mk_lvar in the code *)
 let pp_definitions fmt (vars, funs) =
   SS.iter (fun name ->
     F.fprintf fmt "Definition %s := mkvar %S.@ "
@@ -625,6 +638,9 @@ let pp_definitions fmt (vars, funs) =
 (* -------------------------------------------------------------------- *)
 (* Program *)
 
+(* TODO
+   - print each function body and function definition separately
+   - print imports *)
 let pp_prog pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
   (* Emit variable and funname definitions *)
   let names = collect_prog_names (gd, funcs) in
