@@ -46,6 +46,9 @@ module type Core_arch = sig
   val is_ct_asm_extra : extra_op -> bool
   val is_doit_asm_extra : extra_op -> bool
 
+  val pp_asm_op_for_rocq : Format.formatter -> asm_op -> unit
+  val pp_extra_op_for_rocq : Format.formatter -> extra_op -> unit
+
 end
 
 module type Arch = sig
@@ -83,6 +86,8 @@ module type Arch = sig
   val arch_info : (reg, regx, xreg, rflag, cond, asm_op, extra_op) Pretyping.arch_info
 
   val is_ct_sopn : ?doit:bool -> extended_op -> bool
+
+  val pp_extended_op_for_rocq : Format.formatter -> extended_op -> unit
 end
 
 module Arch_from_Core_arch (A : Core_arch) : Arch

@@ -99,6 +99,98 @@ module Arm_core = struct
     | Oarm_add_large_imm -> true
     | (Osmart_li _ | Osmart_li_cc _) -> true (* emit MOVT *)
 
+  let pp_halfword fmt = function
+    | Arm_instr_decl.HWB -> Format.fprintf fmt "HWB"
+    | Arm_instr_decl.HWT -> Format.fprintf fmt "HWT"
+
+  let pp_shift_kind fmt = function
+    | Shift_kind.SLSL -> Format.fprintf fmt "SLSL"
+    | Shift_kind.SLSR -> Format.fprintf fmt "SLSR"
+    | Shift_kind.SASR -> Format.fprintf fmt "SASR"
+    | Shift_kind.SROR -> Format.fprintf fmt "SROR"
+
+  let pp_arm_options fmt (o : Arm_instr_decl.arm_options) =
+    Format.fprintf fmt "{| set_flags := %b; is_conditional := %b; has_shift := %a |}"
+      o.set_flags o.is_conditional
+      (ToRocq.pp_option (fun fmt sk -> Format.fprintf fmt "%a" pp_shift_kind sk))
+      o.has_shift
+
+  let pp_arm_mnemonic fmt (m : Arm_instr_decl.arm_mnemonic) =
+    let open Arm_instr_decl in
+    match m with
+    | ADD -> Format.fprintf fmt "ADD"
+    | ADC -> Format.fprintf fmt "ADC"
+    | MUL -> Format.fprintf fmt "MUL"
+    | MLA -> Format.fprintf fmt "MLA"
+    | MLS -> Format.fprintf fmt "MLS"
+    | SDIV -> Format.fprintf fmt "SDIV"
+    | SUB -> Format.fprintf fmt "SUB"
+    | SBC -> Format.fprintf fmt "SBC"
+    | RSB -> Format.fprintf fmt "RSB"
+    | UDIV -> Format.fprintf fmt "UDIV"
+    | UMULL -> Format.fprintf fmt "UMULL"
+    | UMAAL -> Format.fprintf fmt "UMAAL"
+    | UMLAL -> Format.fprintf fmt "UMLAL"
+    | SMULL -> Format.fprintf fmt "SMULL"
+    | SMLAL -> Format.fprintf fmt "SMLAL"
+    | SMMUL -> Format.fprintf fmt "SMMUL"
+    | SMMULR -> Format.fprintf fmt "SMMULR"
+    | SMUL_hw (h1, h2) ->
+      Format.fprintf fmt "(SMUL_hw %a %a)" pp_halfword h1 pp_halfword h2
+    | SMLA_hw (h1, h2) ->
+      Format.fprintf fmt "(SMLA_hw %a %a)" pp_halfword h1 pp_halfword h2
+    | SMULW_hw h ->
+      Format.fprintf fmt "(SMULW_hw %a)" pp_halfword h
+    | AND -> Format.fprintf fmt "AND"
+    | BFC -> Format.fprintf fmt "BFC"
+    | BFI -> Format.fprintf fmt "BFI"
+    | BIC -> Format.fprintf fmt "BIC"
+    | EOR -> Format.fprintf fmt "EOR"
+    | MVN -> Format.fprintf fmt "MVN"
+    | ORR -> Format.fprintf fmt "ORR"
+    | ASR -> Format.fprintf fmt "ASR"
+    | LSL -> Format.fprintf fmt "LSL"
+    | LSR -> Format.fprintf fmt "LSR"
+    | ROR -> Format.fprintf fmt "ROR"
+    | REV -> Format.fprintf fmt "REV"
+    | REV16 -> Format.fprintf fmt "REV16"
+    | REVSH -> Format.fprintf fmt "REVSH"
+    | ADR -> Format.fprintf fmt "ADR"
+    | MOV -> Format.fprintf fmt "MOV"
+    | MOVT -> Format.fprintf fmt "MOVT"
+    | UBFX -> Format.fprintf fmt "UBFX"
+    | UXTB -> Format.fprintf fmt "UXTB"
+    | UXTH -> Format.fprintf fmt "UXTH"
+    | SBFX -> Format.fprintf fmt "SBFX"
+    | CLZ -> Format.fprintf fmt "CLZ"
+    | CMP -> Format.fprintf fmt "CMP"
+    | TST -> Format.fprintf fmt "TST"
+    | CMN -> Format.fprintf fmt "CMN"
+    | LDR -> Format.fprintf fmt "LDR"
+    | LDRB -> Format.fprintf fmt "LDRB"
+    | LDRH -> Format.fprintf fmt "LDRH"
+    | LDRSB -> Format.fprintf fmt "LDRSB"
+    | LDRSH -> Format.fprintf fmt "LDRSH"
+    | STR -> Format.fprintf fmt "STR"
+    | STRB -> Format.fprintf fmt "STRB"
+    | STRH -> Format.fprintf fmt "STRH"
+
+  let pp_asm_op_for_rocq fmt (o : asm_op) =
+    let Arm_instr_decl.ARM_op (m, opts) = o in
+    Format.fprintf fmt "(ARM_op %a %a)" pp_arm_mnemonic m pp_arm_options opts
+
+  let pp_extra_op_for_rocq fmt (o : extra_op) =
+    let open Arm_extra in
+    match o with
+    | Oarm_swap ws ->
+      Format.fprintf fmt "(Oarm_swap %a)" ToRocq.pp_wsize ws
+    | Oarm_add_large_imm ->
+      Format.fprintf fmt "Oarm_add_large_imm"
+    | Osmart_li ws ->
+      Format.fprintf fmt "(Osmart_li %a)" ToRocq.pp_wsize ws
+    | Osmart_li_cc ws ->
+      Format.fprintf fmt "(Osmart_li_cc %a)" ToRocq.pp_wsize ws
+
 end
 
 module Arm (Lowering_params : Arm_input) : Arch_full.Core_arch

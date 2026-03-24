@@ -44,6 +44,9 @@ module type Core_arch = sig
   val is_ct_asm_extra : extra_op -> bool
   val is_doit_asm_extra : extra_op -> bool
 
+  val pp_asm_op_for_rocq : Format.formatter -> asm_op -> unit
+  val pp_extra_op_for_rocq : Format.formatter -> extra_op -> unit
+
 end
 
 module type Arch = sig
@@ -81,6 +84,8 @@ module type Arch = sig
   val arch_info : (reg, regx, xreg, rflag, cond, asm_op, extra_op) Pretyping.arch_info
 
   val is_ct_sopn : ?doit:bool -> extended_op -> bool
+
+  val pp_extended_op_for_rocq : Format.formatter -> extended_op -> unit
 end
 
 module Arch_from_Core_arch (A : Core_arch) :
@@ -212,5 +217,13 @@ module Arch_from_Core_arch (A : Core_arch) :
    match o with
    | BaseOp (_, o) -> (if doit then is_doit_asm_op else is_ct_asm_op) o
    | ExtOp o -> (if doit then is_doit_asm_extra else is_ct_asm_extra) o
+
+  let pp_extended_op_for_rocq fmt (o : extended_op) =
+    match o with
+    | BaseOp (msb, op) ->
+      Format.fprintf fmt "(BaseOp (%a, %a))"
+        (ToRocq.pp_option ToRocq.pp_wsize) msb pp_asm_op_for_rocq op
+    | ExtOp op ->
+      Format.fprintf fmt "(ExtOp %a)" pp_extra_op_for_rocq op
 
 end
