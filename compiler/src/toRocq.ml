@@ -558,16 +558,48 @@ let pp_definitions fmt (vars, funs) =
   F.fprintf fmt "@ "
 
 (* -------------------------------------------------------------------- *)
+(* Imports *)
+
+let pp_imports fmt =
+  F.fprintf fmt "From mathcomp Require Import ssreflect ssrfun ssrbool.@ ";
+  F.fprintf fmt "From Coq Require Import ZArith.@ ";
+  F.fprintf fmt "Require Import expr ident var type global warray_ pseudo_operator sopn arch_extra.@ ";
+  F.fprintf fmt "Require Import x86_decl x86_instr_decl x86_extra.@ ";
+  F.fprintf fmt "Import Utf8.@ @ ";
+  F.fprintf fmt "Axiom mkvar : string -> var_i.@ ";
+  F.fprintf fmt "Axiom mkfun : string -> funname.@ ";
+  F.fprintf fmt "Axiom atoI : arch_toIdent.@ ";
+  F.fprintf fmt "#[local] Existing Instance atoI.@ @ "
+
+(* -------------------------------------------------------------------- *)
 (* Program *)
 
-let pp_prog pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
+let pp_prog ~split pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
   let names = collect_prog_names (gd, funcs) in
+  let funcs_rev = List.rev funcs in
   F.fprintf fmt "@[<v 0>";
   pp_definitions fmt names;
-  F.fprintf fmt "Definition program :=@ ";
-  F.fprintf fmt "@[<v 0>{|@ ";
-  F.fprintf fmt "  p_funcs := %a;@ "
-    (pp_list "" (pp_fun_decl pp_asm_op)) (List.rev funcs);
+  if split then begin
+    (* Print each function as a separate Definition *)
+    List.iter (fun fd ->
+      F.fprintf fmt "Definition %s :=@ %a.@ @ "
+        (sanitize_name "fd_" fd.f_name.fn_name)
+        (pp_fun pp_asm_op) fd
+    ) funcs_rev;
+    F.fprintf fmt "Definition program :=@ ";
+    F.fprintf fmt "@[<v 0>{|@ ";
+    F.fprintf fmt "  p_funcs := %a;@ "
+      (pp_list "" (fun fmt fd ->
+        F.fprintf fmt "(%s, %s)"
+          (sanitize_name "fn_" fd.f_name.fn_name)
+          (sanitize_name "fd_" fd.f_name.fn_name)
+      )) funcs_rev
+  end else begin
+    F.fprintf fmt "Definition program :=@ ";
+    F.fprintf fmt "@[<v 0>{|@ ";
+    F.fprintf fmt "  p_funcs := %a;@ "
+      (pp_list "" (pp_fun_decl pp_asm_op)) funcs_rev
+  end;
   F.fprintf fmt "  p_globs := %a;@ "
     (pp_list "" pp_glob_value) gd;
   F.fprintf fmt "  p_extra := tt;@ ";
@@ -576,5 +608,7 @@ let pp_prog pp_asm_op fmt ((gd, funcs) : (unit, _) prog) =
 (* -------------------------------------------------------------------- *)
 (* Entry point *)
 
-let extract prog _arch _pd _msfsz _asmOp pp_asm_op fmt =
-  pp_prog pp_asm_op fmt prog
+let extract ~imports ~split prog _arch _pd _msfsz _asmOp pp_asm_op fmt =
+  if imports then
+    F.fprintf fmt "@[<v 0>%t@]" pp_imports;
+  pp_prog ~split pp_asm_op fmt prog
