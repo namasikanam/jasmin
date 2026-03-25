@@ -596,8 +596,8 @@ let pp_definitions fmt (vars, funs) =
     if not (Hashtbl.mem seen key) then begin
       Hashtbl.add seen key ();
       let mk = if is_global v then "mk_gvar" else "mk_lvar" in
-      F.fprintf fmt "Definition %s := %s (mkvar %S).@ "
-        (sanitize_name (var_prefix v) v.v_name) mk v.v_name
+      F.fprintf fmt "Definition %s := %s (mkvar %a %S).@ "
+        (sanitize_name (var_prefix v) v.v_name) mk pp_atype v.v_ty v.v_name
     end
   ) vars;
   SS.iter (fun name ->
@@ -615,7 +615,7 @@ let pp_imports fmt =
   F.fprintf fmt "Require Import expr ident var type global warray_ pseudo_operator sopn arch_extra.@ ";
   F.fprintf fmt "Require Import x86_decl x86_instr_decl x86_extra.@ ";
   F.fprintf fmt "Import Utf8.@ @ ";
-  F.fprintf fmt "Axiom mkvar : string -> var_i.@ ";
+  F.fprintf fmt "Axiom mkvar : atype -> string -> var_i.@ ";
   F.fprintf fmt "Axiom mkfun : string -> funname.@ ";
   F.fprintf fmt "Axiom atoI : arch_toIdent.@ ";
   F.fprintf fmt "#[local] Existing Instance atoI.@ ";

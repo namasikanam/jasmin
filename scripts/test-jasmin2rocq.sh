@@ -34,7 +34,7 @@ Require Import expr ident var type global warray_ pseudo_operator sopn arch_extr
 Require Import x86_decl x86_instr_decl x86_extra.
 Import Utf8.
 
-Axiom mkvar : string -> var_i.
+Axiom mkvar : atype -> string -> var_i.
 Axiom mkfun : string -> funname.
 Axiom atoI : arch_toIdent.
 #[local] Existing Instance atoI.
