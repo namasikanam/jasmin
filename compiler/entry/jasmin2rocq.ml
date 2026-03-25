@@ -93,7 +93,10 @@ let after_pass =
       Compiler.(List.filter (( > ) StackAllocation) compiler_step_list)
   in
   let doc =
-    Format.asprintf "Run after the given compilation pass (%s)."
+    Format.asprintf
+      "Run after the given compilation pass. Only passes before stack \
+       allocation are supported, since later passes produce a different \
+       program representation. Possible values are %s."
       (Arg.doc_alts_enum alts)
   in
   let passes = Arg.enum alts in
