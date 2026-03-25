@@ -38,6 +38,7 @@ Axiom mkvar : string -> var_i.
 Axiom mkfun : string -> funname.
 Axiom atoI : arch_toIdent.
 #[local] Existing Instance atoI.
+#[local] Coercion gv : gvar >-> var_i.
 '
 
 # Collect all .jazz files under compiler/examples

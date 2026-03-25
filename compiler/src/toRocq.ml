@@ -11,34 +11,42 @@ module SS = Set.Make(String)
    Jasmin names may contain '.', '#', and other non-alphanumeric characters
    (e.g. after inlining: "f.x.42", after SSA: "x#3"). *)
 
-let sanitize_char c =
-  if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-     || (c >= '0' && c <= '9') || c = '_' then c
-  else '_'
-
 let sanitize_name prefix s =
   let buf = Buffer.create (String.length prefix + String.length s) in
   Buffer.add_string buf prefix;
-  String.iter (fun c -> Buffer.add_char buf (sanitize_char c)) s;
+  String.iter (fun c ->
+    if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+       || (c >= '0' && c <= '9') then
+      Buffer.add_char buf c
+    else match c with
+    | '_' -> Buffer.add_string buf "__"
+    | '.' -> Buffer.add_string buf "_dot_"
+    | '#' -> Buffer.add_string buf "_hash_"
+    | '\'' -> Buffer.add_string buf "_tick_"
+    | _ -> Printf.bprintf buf "_%02x_" (Char.code c)
+  ) s;
   Buffer.contents buf
 
 (* -------------------------------------------------------------------- *)
-(* Name collection: gather all variable and function names in a program *)
+(* Name collection: gather all variables and function names in a program.
+   Variable scope (local/global) is determined from v_kind on the var. *)
+
+let is_global (x : var) = x.v_kind = Wsize.Global
+
+let var_prefix (x : var) = if is_global x then "vg_" else "v_"
 
 let collect_prog_names ((gd, funcs) : (unit, _) prog) =
   let vars =
     List.fold_left (fun acc fd ->
-      Sv.fold (fun v acc -> SS.add v.v_name acc) (vars_fc fd) acc
-    ) SS.empty funcs
+      Sv.fold (fun v acc -> Sv.add v acc) (vars_fc fd) acc
+    ) Sv.empty funcs
   in
   let vars =
-    List.fold_left (fun acc (x, _) -> SS.add x.v_name acc) vars gd
+    List.fold_left (fun acc (x, _) -> Sv.add x acc) vars gd
   in
   let funs =
     List.fold_left (fun acc fd ->
       let acc = SS.add fd.f_name.fn_name acc in
-      Sv.fold (fun _ acc -> acc) (vars_fc fd) acc |> ignore;
-      (* Collect funnames from Ccall sites *)
       let rec from_stmt acc c = List.fold_left from_instr acc c
       and from_instr acc i =
         match i.i_desc with
@@ -146,23 +154,22 @@ let pp_dir fmt = function
 
 (* -------------------------------------------------------------------- *)
 (* Variables - use sanitized identifiers.
-   The v_ prefix avoids clashing with Rocq keywords and constructor names. *)
+   The prefix (v_ or vg_) is determined by the variable's kind. *)
 
 let pp_var fmt (x : var) =
-  F.fprintf fmt "%s" (sanitize_name "v_" x.v_name)
+  F.fprintf fmt "%s" (sanitize_name (var_prefix x) x.v_name)
 
 let pp_var_i fmt (x : var_i) =
   let v = L.unloc x in
-  F.fprintf fmt "%s" (sanitize_name "v_" v.v_name)
+  F.fprintf fmt "%s" (sanitize_name (var_prefix v) v.v_name)
 
 (* -------------------------------------------------------------------- *)
-(* Gvar *)
+(* Gvar — variables are defined as gvars with the correct scope,
+   so we just print the identifier. *)
 
 let pp_gvar fmt (x : int ggvar) =
-  let name = sanitize_name "v_" (L.unloc x.gv).v_name in
-  match x.gs with
-  | Expr.Slocal -> F.fprintf fmt "(mk_lvar %s)" name
-  | Expr.Sglob  -> F.fprintf fmt "(mk_gvar %s)" name
+  let v = L.unloc x.gv in
+  F.fprintf fmt "%s" (sanitize_name (var_prefix v) v.v_name)
 
 (* -------------------------------------------------------------------- *)
 (* Op_kind *)
@@ -497,10 +504,13 @@ let pp_fun pp_asm_op fmt fd =
   F.fprintf fmt "f_contract := None;@ ";
   F.fprintf fmt "f_tyin := %a;@ " (pp_list "" pp_atype) fd.f_tyin;
   F.fprintf fmt "f_params := %a;@ "
-    (pp_list "" pp_var) fd.f_args;
+    (pp_list "" (fun fmt (x : var) ->
+      F.fprintf fmt "(%a : var_i)" pp_var x)) fd.f_args;
   F.fprintf fmt "f_body :=@ @[<v 0>%a@];@ " (pp_stmt pp_asm_op) fd.f_body;
   F.fprintf fmt "f_tyout := %a;@ " (pp_list "" pp_atype) fd.f_tyout;
-  F.fprintf fmt "f_res := %a;@ " (pp_list "" pp_var_i) fd.f_ret;
+  F.fprintf fmt "f_res := %a;@ "
+    (pp_list "" (fun fmt (x : var_i) ->
+      F.fprintf fmt "(%a : var_i)" pp_var_i x)) fd.f_ret;
   F.fprintf fmt "f_extra := tt;@ ";
   F.fprintf fmt "@]|}"
 
@@ -547,9 +557,16 @@ let pp_glob_value fmt (x, gd) =
 (* Definition bindings *)
 
 let pp_definitions fmt (vars, funs) =
-  SS.iter (fun name ->
-    F.fprintf fmt "Definition %s := mkvar %S.@ "
-      (sanitize_name "v_" name) name
+  (* Deduplicate by (name, is_global) to avoid duplicate Rocq definitions *)
+  let seen = Hashtbl.create 64 in
+  Sv.iter (fun (v : var) ->
+    let key = (v.v_name, is_global v) in
+    if not (Hashtbl.mem seen key) then begin
+      Hashtbl.add seen key ();
+      let mk = if is_global v then "mk_gvar" else "mk_lvar" in
+      F.fprintf fmt "Definition %s := %s (mkvar %S).@ "
+        (sanitize_name (var_prefix v) v.v_name) mk v.v_name
+    end
   ) vars;
   SS.iter (fun name ->
     F.fprintf fmt "Definition %s := mkfun %S.@ "
@@ -569,7 +586,8 @@ let pp_imports fmt =
   F.fprintf fmt "Axiom mkvar : string -> var_i.@ ";
   F.fprintf fmt "Axiom mkfun : string -> funname.@ ";
   F.fprintf fmt "Axiom atoI : arch_toIdent.@ ";
-  F.fprintf fmt "#[local] Existing Instance atoI.@ @ "
+  F.fprintf fmt "#[local] Existing Instance atoI.@ ";
+  F.fprintf fmt "#[local] Coercion gv : gvar >-> var_i.@ @ "
 
 (* -------------------------------------------------------------------- *)
 (* Program *)
