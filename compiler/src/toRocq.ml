@@ -205,6 +205,38 @@ let pp_velem fmt = function
   | VE64 -> F.fprintf fmt "VE64"
 
 (* -------------------------------------------------------------------- *)
+(* Helpers for printing Rocq constructors with their arguments.
+   Used by architecture-specific asm_op printers. *)
+
+let pp_bare name fmt = F.fprintf fmt "%s" name
+
+let pp_ws name fmt ws =
+  F.fprintf fmt "(%s %a)" name pp_wsize ws
+
+let pp_ws2 name fmt (ws1, ws2) =
+  F.fprintf fmt "(%s %a %a)" name pp_wsize ws1 pp_wsize ws2
+
+let pp_ve name fmt ve =
+  F.fprintf fmt "(%s %a)" name pp_velem ve
+
+let pp_ve_ws name fmt (ve, ws) =
+  F.fprintf fmt "(%s %a %a)" name pp_velem ve pp_wsize ws
+
+let pp_s_ws name fmt (s, ws) =
+  F.fprintf fmt "(%s %a %a)" name pp_signedness s pp_wsize ws
+
+let pp_reg_kind fmt = function
+  | Wsize.Normal -> F.fprintf fmt "Normal"
+  | Wsize.Extra  -> F.fprintf fmt "Extra"
+
+let pp_rk_ws name fmt (rk, ws) =
+  F.fprintf fmt "(%s %a %a)" name pp_reg_kind rk pp_wsize ws
+
+let pp_ve_ws_ve_ws name fmt (ve1, ws1, ve2, ws2) =
+  F.fprintf fmt "(%s %a %a %a %a)" name
+    pp_velem ve1 pp_wsize ws1 pp_velem ve2 pp_wsize ws2
+
+(* -------------------------------------------------------------------- *)
 (* Unary operators *)
 
 let pp_wiop1 fmt = function

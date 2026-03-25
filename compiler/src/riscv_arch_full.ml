@@ -40,50 +40,46 @@ module Riscv_core = struct
   let pp_asm_op_for_rocq fmt (o : asm_op) =
     let open Riscv_instr_decl in
     match o with
-    | ADD -> Format.fprintf fmt "ADD"
-    | ADDI -> Format.fprintf fmt "ADDI"
-    | SUB -> Format.fprintf fmt "SUB"
-    | SLT -> Format.fprintf fmt "SLT"
-    | SLTI -> Format.fprintf fmt "SLTI"
-    | SLTU -> Format.fprintf fmt "SLTU"
-    | SLTIU -> Format.fprintf fmt "SLTIU"
-    | AND -> Format.fprintf fmt "AND"
-    | ANDI -> Format.fprintf fmt "ANDI"
-    | OR -> Format.fprintf fmt "OR"
-    | ORI -> Format.fprintf fmt "ORI"
-    | XOR -> Format.fprintf fmt "XOR"
-    | XORI -> Format.fprintf fmt "XORI"
-    | SLL -> Format.fprintf fmt "SLL"
-    | SLLI -> Format.fprintf fmt "SLLI"
-    | SRL -> Format.fprintf fmt "SRL"
-    | SRLI -> Format.fprintf fmt "SRLI"
-    | SRA -> Format.fprintf fmt "SRA"
-    | SRAI -> Format.fprintf fmt "SRAI"
-    | MV -> Format.fprintf fmt "MV"
-    | LA -> Format.fprintf fmt "LA"
-    | LI -> Format.fprintf fmt "LI"
-    | NOT -> Format.fprintf fmt "NOT"
-    | NEG -> Format.fprintf fmt "NEG"
-    | LOAD (s, ws) ->
-      Format.fprintf fmt "(LOAD %a %a)" ToRocq.pp_signedness s ToRocq.pp_wsize ws
-    | STORE ws ->
-      Format.fprintf fmt "(STORE %a)" ToRocq.pp_wsize ws
-    | MUL -> Format.fprintf fmt "MUL"
-    | MULH -> Format.fprintf fmt "MULH"
-    | MULHU -> Format.fprintf fmt "MULHU"
-    | MULHSU -> Format.fprintf fmt "MULHSU"
-    | DIV -> Format.fprintf fmt "DIV"
-    | DIVU -> Format.fprintf fmt "DIVU"
-    | REM -> Format.fprintf fmt "REM"
-    | REMU -> Format.fprintf fmt "REMU"
+    | ADD -> ToRocq.pp_bare "ADD" fmt
+    | ADDI -> ToRocq.pp_bare "ADDI" fmt
+    | SUB -> ToRocq.pp_bare "SUB" fmt
+    | SLT -> ToRocq.pp_bare "SLT" fmt
+    | SLTI -> ToRocq.pp_bare "SLTI" fmt
+    | SLTU -> ToRocq.pp_bare "SLTU" fmt
+    | SLTIU -> ToRocq.pp_bare "SLTIU" fmt
+    | AND -> ToRocq.pp_bare "AND" fmt
+    | ANDI -> ToRocq.pp_bare "ANDI" fmt
+    | OR -> ToRocq.pp_bare "OR" fmt
+    | ORI -> ToRocq.pp_bare "ORI" fmt
+    | XOR -> ToRocq.pp_bare "XOR" fmt
+    | XORI -> ToRocq.pp_bare "XORI" fmt
+    | SLL -> ToRocq.pp_bare "SLL" fmt
+    | SLLI -> ToRocq.pp_bare "SLLI" fmt
+    | SRL -> ToRocq.pp_bare "SRL" fmt
+    | SRLI -> ToRocq.pp_bare "SRLI" fmt
+    | SRA -> ToRocq.pp_bare "SRA" fmt
+    | SRAI -> ToRocq.pp_bare "SRAI" fmt
+    | MV -> ToRocq.pp_bare "MV" fmt
+    | LA -> ToRocq.pp_bare "LA" fmt
+    | LI -> ToRocq.pp_bare "LI" fmt
+    | NOT -> ToRocq.pp_bare "NOT" fmt
+    | NEG -> ToRocq.pp_bare "NEG" fmt
+    | LOAD (s, ws) -> ToRocq.pp_s_ws "LOAD" fmt (s, ws)
+    | STORE ws -> ToRocq.pp_ws "STORE" fmt ws
+    | MUL -> ToRocq.pp_bare "MUL" fmt
+    | MULH -> ToRocq.pp_bare "MULH" fmt
+    | MULHU -> ToRocq.pp_bare "MULHU" fmt
+    | MULHSU -> ToRocq.pp_bare "MULHSU" fmt
+    | DIV -> ToRocq.pp_bare "DIV" fmt
+    | DIVU -> ToRocq.pp_bare "DIVU" fmt
+    | REM -> ToRocq.pp_bare "REM" fmt
+    | REMU -> ToRocq.pp_bare "REMU" fmt
 
   let pp_extra_op_for_rocq fmt (o : extra_op) =
     let open Riscv_extra in
     match o with
-    | SWAP ws ->
-      Format.fprintf fmt "(SWAP %a)" ToRocq.pp_wsize ws
-    | Oriscv_add_large_imm ->
-      Format.fprintf fmt "Oriscv_add_large_imm"
+    | SWAP ws -> ToRocq.pp_ws "SWAP" fmt ws
+    | Oriscv_add_large_imm -> ToRocq.pp_bare "Oriscv_add_large_imm" fmt
 
 end
 

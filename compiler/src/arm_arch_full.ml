@@ -99,81 +99,84 @@ module Arm_core = struct
     | Oarm_add_large_imm -> true
     | (Osmart_li _ | Osmart_li_cc _) -> true (* emit MOVT *)
 
-  let pp_halfword fmt = function
-    | Arm_instr_decl.HWB -> Format.fprintf fmt "HWB"
-    | Arm_instr_decl.HWT -> Format.fprintf fmt "HWT"
-
   let pp_shift_kind fmt = function
-    | Shift_kind.SLSL -> Format.fprintf fmt "SLSL"
-    | Shift_kind.SLSR -> Format.fprintf fmt "SLSR"
-    | Shift_kind.SASR -> Format.fprintf fmt "SASR"
-    | Shift_kind.SROR -> Format.fprintf fmt "SROR"
+    | Shift_kind.SLSL -> ToRocq.pp_bare "SLSL" fmt
+    | Shift_kind.SLSR -> ToRocq.pp_bare "SLSR" fmt
+    | Shift_kind.SASR -> ToRocq.pp_bare "SASR" fmt
+    | Shift_kind.SROR -> ToRocq.pp_bare "SROR" fmt
 
   let pp_arm_options fmt (o : Arm_instr_decl.arm_options) =
     Format.fprintf fmt "{| set_flags := %b; is_conditional := %b; has_shift := %a |}"
       o.set_flags o.is_conditional
-      (ToRocq.pp_option (fun fmt sk -> Format.fprintf fmt "%a" pp_shift_kind sk))
+      (ToRocq.pp_option pp_shift_kind)
       o.has_shift
+
+  let pp_halfword fmt = function
+    | Arm_instr_decl.HWB -> ToRocq.pp_bare "HWB" fmt
+    | Arm_instr_decl.HWT -> ToRocq.pp_bare "HWT" fmt
+
+  let pp_hw2 name fmt (h1, h2) =
+    Format.fprintf fmt "(%s %a %a)" name pp_halfword h1 pp_halfword h2
+
+  let pp_hw name fmt h =
+    Format.fprintf fmt "(%s %a)" name pp_halfword h
 
   let pp_arm_mnemonic fmt (m : Arm_instr_decl.arm_mnemonic) =
     let open Arm_instr_decl in
     match m with
-    | ADD -> Format.fprintf fmt "ADD"
-    | ADC -> Format.fprintf fmt "ADC"
-    | MUL -> Format.fprintf fmt "MUL"
-    | MLA -> Format.fprintf fmt "MLA"
-    | MLS -> Format.fprintf fmt "MLS"
-    | SDIV -> Format.fprintf fmt "SDIV"
-    | SUB -> Format.fprintf fmt "SUB"
-    | SBC -> Format.fprintf fmt "SBC"
-    | RSB -> Format.fprintf fmt "RSB"
-    | UDIV -> Format.fprintf fmt "UDIV"
-    | UMULL -> Format.fprintf fmt "UMULL"
-    | UMAAL -> Format.fprintf fmt "UMAAL"
-    | UMLAL -> Format.fprintf fmt "UMLAL"
-    | SMULL -> Format.fprintf fmt "SMULL"
-    | SMLAL -> Format.fprintf fmt "SMLAL"
-    | SMMUL -> Format.fprintf fmt "SMMUL"
-    | SMMULR -> Format.fprintf fmt "SMMULR"
-    | SMUL_hw (h1, h2) ->
-      Format.fprintf fmt "(SMUL_hw %a %a)" pp_halfword h1 pp_halfword h2
-    | SMLA_hw (h1, h2) ->
-      Format.fprintf fmt "(SMLA_hw %a %a)" pp_halfword h1 pp_halfword h2
-    | SMULW_hw h ->
-      Format.fprintf fmt "(SMULW_hw %a)" pp_halfword h
-    | AND -> Format.fprintf fmt "AND"
-    | BFC -> Format.fprintf fmt "BFC"
-    | BFI -> Format.fprintf fmt "BFI"
-    | BIC -> Format.fprintf fmt "BIC"
-    | EOR -> Format.fprintf fmt "EOR"
-    | MVN -> Format.fprintf fmt "MVN"
-    | ORR -> Format.fprintf fmt "ORR"
-    | ASR -> Format.fprintf fmt "ASR"
-    | LSL -> Format.fprintf fmt "LSL"
-    | LSR -> Format.fprintf fmt "LSR"
-    | ROR -> Format.fprintf fmt "ROR"
-    | REV -> Format.fprintf fmt "REV"
-    | REV16 -> Format.fprintf fmt "REV16"
-    | REVSH -> Format.fprintf fmt "REVSH"
-    | ADR -> Format.fprintf fmt "ADR"
-    | MOV -> Format.fprintf fmt "MOV"
-    | MOVT -> Format.fprintf fmt "MOVT"
-    | UBFX -> Format.fprintf fmt "UBFX"
-    | UXTB -> Format.fprintf fmt "UXTB"
-    | UXTH -> Format.fprintf fmt "UXTH"
-    | SBFX -> Format.fprintf fmt "SBFX"
-    | CLZ -> Format.fprintf fmt "CLZ"
-    | CMP -> Format.fprintf fmt "CMP"
-    | TST -> Format.fprintf fmt "TST"
-    | CMN -> Format.fprintf fmt "CMN"
-    | LDR -> Format.fprintf fmt "LDR"
-    | LDRB -> Format.fprintf fmt "LDRB"
-    | LDRH -> Format.fprintf fmt "LDRH"
-    | LDRSB -> Format.fprintf fmt "LDRSB"
-    | LDRSH -> Format.fprintf fmt "LDRSH"
-    | STR -> Format.fprintf fmt "STR"
-    | STRB -> Format.fprintf fmt "STRB"
-    | STRH -> Format.fprintf fmt "STRH"
+    | ADD -> ToRocq.pp_bare "ADD" fmt
+    | ADC -> ToRocq.pp_bare "ADC" fmt
+    | MUL -> ToRocq.pp_bare "MUL" fmt
+    | MLA -> ToRocq.pp_bare "MLA" fmt
+    | MLS -> ToRocq.pp_bare "MLS" fmt
+    | SDIV -> ToRocq.pp_bare "SDIV" fmt
+    | SUB -> ToRocq.pp_bare "SUB" fmt
+    | SBC -> ToRocq.pp_bare "SBC" fmt
+    | RSB -> ToRocq.pp_bare "RSB" fmt
+    | UDIV -> ToRocq.pp_bare "UDIV" fmt
+    | UMULL -> ToRocq.pp_bare "UMULL" fmt
+    | UMAAL -> ToRocq.pp_bare "UMAAL" fmt
+    | UMLAL -> ToRocq.pp_bare "UMLAL" fmt
+    | SMULL -> ToRocq.pp_bare "SMULL" fmt
+    | SMLAL -> ToRocq.pp_bare "SMLAL" fmt
+    | SMMUL -> ToRocq.pp_bare "SMMUL" fmt
+    | SMMULR -> ToRocq.pp_bare "SMMULR" fmt
+    | SMUL_hw (h1, h2) -> pp_hw2 "SMUL_hw" fmt (h1, h2)
+    | SMLA_hw (h1, h2) -> pp_hw2 "SMLA_hw" fmt (h1, h2)
+    | SMULW_hw h -> pp_hw "SMULW_hw" fmt h
+    | AND -> ToRocq.pp_bare "AND" fmt
+    | BFC -> ToRocq.pp_bare "BFC" fmt
+    | BFI -> ToRocq.pp_bare "BFI" fmt
+    | BIC -> ToRocq.pp_bare "BIC" fmt
+    | EOR -> ToRocq.pp_bare "EOR" fmt
+    | MVN -> ToRocq.pp_bare "MVN" fmt
+    | ORR -> ToRocq.pp_bare "ORR" fmt
+    | ASR -> ToRocq.pp_bare "ASR" fmt
+    | LSL -> ToRocq.pp_bare "LSL" fmt
+    | LSR -> ToRocq.pp_bare "LSR" fmt
+    | ROR -> ToRocq.pp_bare "ROR" fmt
+    | REV -> ToRocq.pp_bare "REV" fmt
+    | REV16 -> ToRocq.pp_bare "REV16" fmt
+    | REVSH -> ToRocq.pp_bare "REVSH" fmt
+    | ADR -> ToRocq.pp_bare "ADR" fmt
+    | MOV -> ToRocq.pp_bare "MOV" fmt
+    | MOVT -> ToRocq.pp_bare "MOVT" fmt
+    | UBFX -> ToRocq.pp_bare "UBFX" fmt
+    | UXTB -> ToRocq.pp_bare "UXTB" fmt
+    | UXTH -> ToRocq.pp_bare "UXTH" fmt
+    | SBFX -> ToRocq.pp_bare "SBFX" fmt
+    | CLZ -> ToRocq.pp_bare "CLZ" fmt
+    | CMP -> ToRocq.pp_bare "CMP" fmt
+    | TST -> ToRocq.pp_bare "TST" fmt
+    | CMN -> ToRocq.pp_bare "CMN" fmt
+    | LDR -> ToRocq.pp_bare "LDR" fmt
+    | LDRB -> ToRocq.pp_bare "LDRB" fmt
+    | LDRH -> ToRocq.pp_bare "LDRH" fmt
+    | LDRSB -> ToRocq.pp_bare "LDRSB" fmt
+    | LDRSH -> ToRocq.pp_bare "LDRSH" fmt
+    | STR -> ToRocq.pp_bare "STR" fmt
+    | STRB -> ToRocq.pp_bare "STRB" fmt
+    | STRH -> ToRocq.pp_bare "STRH" fmt
 
   let pp_asm_op_for_rocq fmt (o : asm_op) =
     let Arm_instr_decl.ARM_op (m, opts) = o in
@@ -182,14 +185,10 @@ module Arm_core = struct
   let pp_extra_op_for_rocq fmt (o : extra_op) =
     let open Arm_extra in
     match o with
-    | Oarm_swap ws ->
-      Format.fprintf fmt "(Oarm_swap %a)" ToRocq.pp_wsize ws
-    | Oarm_add_large_imm ->
-      Format.fprintf fmt "Oarm_add_large_imm"
-    | Osmart_li ws ->
-      Format.fprintf fmt "(Osmart_li %a)" ToRocq.pp_wsize ws
-    | Osmart_li_cc ws ->
-      Format.fprintf fmt "(Osmart_li_cc %a)" ToRocq.pp_wsize ws
+    | Oarm_swap ws -> ToRocq.pp_ws "Oarm_swap" fmt ws
+    | Oarm_add_large_imm -> ToRocq.pp_bare "Oarm_add_large_imm" fmt
+    | Osmart_li ws -> ToRocq.pp_ws "Osmart_li" fmt ws
+    | Osmart_li_cc ws -> ToRocq.pp_ws "Osmart_li_cc" fmt ws
 
 end
 
